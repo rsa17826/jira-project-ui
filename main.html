@@ -377,32 +377,29 @@
           statusClass = "progress"
         else if (task.statusCategory === "Done") statusClass = "done"
 
-        return `
-  <div class="task ${statusClass} ${isBlocked ? "blocker" : ""}" data-task-key="${task.key}">
-    <a 
-    class="jira-link" 
-    href="${jiraUrl}" 
-    target="_blank" 
-  >${task.key}</a>${
-    isBlocked ?
-      `
-   🚨 Blocked by: ${task.blockedBy
-     .map((key) => {
-       const blocker = tasks[key] // lookup in your dict
-       const name = blocker?.assignee || "Unknown"
-       const avatar =
-         blocker?.assigneeUrl || "https://via.placeholder.com/20"
-       return `<a href="https://${domain}/browse/${key}" target="_blank" class="blocker-link">${key} <img src="${avatar}" width="20" height="20" style="vertical-align: middle; border-radius:50%; margin-left:4px;" alt="${name}" title="${name}" /></a>`
-     })
-     .join(", ")}`
-    : ""
-  }
-    ${task.summary}
-    <strong>Status:</strong> ${task.status}
-    <strong>Assignee:</strong> ${task.assignee || "Unassigned"} <img style='vertical-align: middle; margin-left: -2px; border-radius: 50%;' width=18px height=18px src="${task.assigneeUrl}"></img>
-    <strong>Parent:</strong> ${task.parent}
-  </div>
-  `
+        return `<div class="task ${statusClass} ${isBlocked ? "blocker" : ""}" data-task-key="${task.key}"><a 
+class="jira-link" 
+href="${jiraUrl}" 
+target="_blank" 
+>${task.key}</a>${
+          isBlocked ?
+            `
+🚨 Blocked by: ${task.blockedBy
+              .map((key) => {
+                const blocker = tasks[key] // lookup in your dict
+                const name = blocker?.assignee || "Unknown"
+                const avatar =
+                  blocker?.assigneeUrl ||
+                  "https://via.placeholder.com/20"
+                return `<a href="https://${domain}/browse/${key}" target="_blank" class="blocker-link">${key} <img src="${avatar}" width="20" height="20" style="vertical-align: middle; border-radius:50%; margin-left:4px;" alt="${name}" title="${name}" /></a>`
+              })
+              .join(", ")}`
+          : ""
+        }
+${task.summary}
+<strong>Status:</strong> ${task.status}
+<strong>Assignee:</strong> ${task.assignee || "Unassigned"} <img style='vertical-align: middle; margin-left: -2px; border-radius: 50%;' width=18px height=18px src="${task.assigneeUrl}"></img>
+<strong>Parent:</strong> ${task.parent}</div>`
       }
       async function getAllProjects() {
         const res = await globalrequest({
