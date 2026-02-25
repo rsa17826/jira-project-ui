@@ -209,6 +209,32 @@
     <script src="./js globals/allfuncs.js"></script>
     <script src="./js globals/log.js"></script>
     <script src="./token.js"></script>
+    <svg
+      id="arrowsLayer"
+      style="
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+      "
+    >
+      <defs>
+        <marker
+          id="arrowhead"
+          markerWidth="10"
+          markerHeight="7"
+          refX="10"
+          refY="3.5"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <polygon points="0 0, 10 3.5, 0 7" fill="red" />
+        </marker>
+      </defs>
+    </svg>
     <script>
       const a = loadlib("allfuncs")
       var uname = null
@@ -305,6 +331,7 @@
         a.qs("#output").innerHTML = subtasks.map(showTask).join("")
         if (localStorage.lastSelfShownState === "true")
           toggleShowOnlySelf(a.qs("#toggleSelf"))
+        drawAllDependencies()
       }
       //     function showTask({ key, assignee, status, summary, parent }) {
       //       return `
@@ -374,6 +401,7 @@
                 "block"
               : "none"),
         )
+        drawAllDependencies()
       }
 
       function showTask(task) {
@@ -458,6 +486,122 @@ ${task.summary}
 
         return Array.from(assignees.values())
       }
+      function getTaskCenter(el) {
+        const rect = el.getBoundingClientRect()
+        return {
+          x: rect.left + rect.width / 2 + window.scrollX,
+          y: rect.top + rect.height / 2 + window.scrollY,
+        }
+      }
+
+      function getEdgePoint(fromEl, toEl) {
+        const rectFrom = fromEl.getBoundingClientRect()
+        const rectTo = toEl.getBoundingClientRect()
+        const inset = 10 // 10px inside the div
+
+        // Compute horizontal/vertical centers
+        const fromCenterX =
+          rectFrom.left + rectFrom.width / 2 + window.scrollX
+        const fromCenterY =
+          rectFrom.top + rectFrom.height / 2 + window.scrollY
+        const toCenterX =
+          rectTo.left + rectTo.width / 2 + window.scrollX
+        const toCenterY =
+          rectTo.top + rectTo.height / 2 + window.scrollY
+
+        let x, y
+
+        const dx = toCenterX - fromCenterX
+        const dy = toCenterY - fromCenterY
+        const absDx = Math.abs(dx)
+        const absDy = Math.abs(dy)
+
+        if (absDx > absDy) {
+          // horizontal connection
+          x =
+            dx > 0 ?
+              rectFrom.right - inset + window.scrollX
+            : rectFrom.left + inset + window.scrollX
+          y = fromCenterY
+        } else {
+          // vertical connection
+          x = fromCenterX
+          y =
+            dy > 0 ?
+              rectFrom.bottom - inset + window.scrollY
+            : rectFrom.top + inset + window.scrollY
+        }
+
+        return { x, y }
+      }
+      function drawCurvedArrowEdge(fromEl, toEl) {
+        const svg = document.getElementById("arrowsLayer")
+
+        const start = getEdgePoint(fromEl, toEl)
+        const end = getEdgePoint(toEl, fromEl) // target inset
+
+        // control point for curve: offset perpendicular to the line
+        const dx = end.x - start.x
+        const dy = end.y - start.y
+
+        // perpendicular offset (smaller for short lines, bigger for longer)
+        const offset = Math.min(50, Math.sqrt(dx * dx + dy * dy) / 3)
+
+        const path = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "path",
+        )
+        path.setAttribute(
+          "d",
+          `M ${start.x},${start.y} ${end.x},${end.y}`,
+        )
+        path.setAttribute("stroke", "#de350b")
+        path.setAttribute("stroke-width", "2")
+        path.setAttribute("fill", "none")
+        path.setAttribute("marker-end", "url(#arrowhead)")
+
+        svg.appendChild(path)
+      }
+      function drawAllDependencies() {
+        const svg = document.getElementById("arrowsLayer")
+        svg.innerHTML = svg.querySelector("defs").outerHTML // reset but keep arrowhead
+
+        document.querySelectorAll(".task").forEach((taskDiv) => {
+          const taskKey = taskDiv.getAttribute("data-task-key")
+          const task = tasks[taskKey]
+
+          if (!task.blockedBy || task.blockedBy.length === 0) return
+
+          task.blockedBy.forEach((blockerKey) => {
+            const blockerDiv = document.querySelector(
+              `[data-task-key="${blockerKey}"]`,
+            )
+            if (blockerDiv) drawCurvedArrowEdge(taskDiv, blockerDiv) // blocked → blocker
+          })
+        })
+      }
+      window.addEventListener("resize", drawAllDependencies)
+
+      // Add arrowhead marker
+      const svg = document.getElementById("arrowsLayer")
+      const marker = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "marker",
+      )
+      marker.setAttribute("id", "arrowhead")
+      marker.setAttribute("markerWidth", "10")
+      marker.setAttribute("markerHeight", "7")
+      marker.setAttribute("refX", "0")
+      marker.setAttribute("refY", "3.5")
+      marker.setAttribute("orient", "auto")
+      const polygon = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "polygon",
+      )
+      polygon.setAttribute("points", "0 0, 10 3.5, 0 7")
+      polygon.setAttribute("fill", "red")
+      marker.appendChild(polygon)
+      svg.appendChild(marker)
     </script>
   </body>
 </html>
