@@ -290,6 +290,15 @@
         //   }
         // }
         for (var v of subtasks) {
+          v.assigneeUrl =
+            imageReplaces[
+              v.assigneeUrl
+                .replace(
+                  "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/",
+                  "",
+                )
+                .replace(/-\d+\.png$/, "")
+            ] ?? v.assigneeUrl
           tasks[v.key] = v
         }
         document.getElementById("output").innerHTML = subtasks
@@ -388,9 +397,7 @@ target="_blank"
               .map((key) => {
                 const blocker = tasks[key] // lookup in your dict
                 const name = blocker?.assignee || "Unknown"
-                const avatar =
-                  blocker?.assigneeUrl ||
-                  "https://via.placeholder.com/20"
+                const avatar = blocker?.assigneeUrl || "about:blank"
                 return `<a href="https://${domain}/browse/${key}" target="_blank" class="blocker-link">${key} <img src="${avatar}" width="20" height="20" style="vertical-align: middle; border-radius:50%; margin-left:4px;" alt="${name}" title="${name}" /></a>`
               })
               .join(", ")}`
