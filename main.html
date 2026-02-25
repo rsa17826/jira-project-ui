@@ -10,7 +10,7 @@
         border-left: 6px solid;
         background: #f4f6f8;
         font-family: Arial, sans-serif;
-        line-height: 0.7; /* tighter line height */
+        /* line-height: 0.7; */
       }
 
       .jira-link {
@@ -161,10 +161,10 @@
         return `
     <div class="task ${statusClass} ${isBlocked ? "blocker" : ""}">
       <a class="jira-link" href="${jiraUrl}" target="_blank">${task.key}</a>
-      ${isBlocked ? `<div class="blocked">🚨 Blocked by: ${task.blockedBy.join(", ")}</div>` : ""}
-      <div><strong>Status:</strong> ${task.status}</div>
-      <div><strong>Assignee:</strong> ${task.assignee || "Unassigned"}</div>
-      <div><strong>Parent:</strong> ${task.parent}</div>
+      ${isBlocked ? `<z class="blocked">🚨 Blocked by: ${task.blockedBy.join(", ")}</z>` : ""}
+      <strong>Status:</strong> ${task.status}
+      <strong>Assignee:</strong> ${task.assignee || "Unassigned"}
+      <strong>Parent:</strong> ${task.parent}
     </div>
   `
       }
