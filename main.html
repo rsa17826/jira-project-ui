@@ -231,7 +231,7 @@
       // var assigneeDict = {}
       async function getSubtasks() {
         const jql = `
-          project = "T1"
+          project = "${currentProject}"
           AND issuetype IN subTaskIssueTypes()
           ORDER BY created DESC
         `
