@@ -212,6 +212,7 @@
     <script>
       const a = loadlib("allfuncs")
       var uname = null
+      var email = null
       var tasks = {}
       localStorage.lastSelfShownState ??= "true"
       toggleShowOnlySelf(a.qs("#toggleSelf"))
@@ -226,6 +227,7 @@
       }
       getCurrentUser().then((e) => {
         uname = e.displayName
+        email = e.emailAddress
         getSubtasks()
       })
       // var assigneeDict = {}
