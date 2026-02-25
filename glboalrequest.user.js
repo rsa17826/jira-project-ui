@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         globalrequest
-// @version      1
+// @version      2
 // @description  none
 // @run-at       document-start
 // @author       rssaromeo
@@ -19,6 +19,7 @@ function c() {
       GM_xmlhttpRequest(data)
       await waituntil(() => temp)
       temp.text = temp.responseText
+      temp.ok = temp.status == 200
       return temp
     }
   }

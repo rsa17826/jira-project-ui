@@ -91,7 +91,7 @@
           .filter((issue) => issue.fields.issuetype.subtask)
           .map((issue) => {
             const { blocks, blockedBy } = extractBlockInfo(issue)
-
+            log(issue)
             return {
               key: issue.key,
               summary: issue.fields.summary,
@@ -99,6 +99,13 @@
               statusCategory:
                 issue.fields.status?.statusCategory?.name,
               assignee: issue.fields.assignee?.displayName,
+              assigneeUrl: unescape(
+                Object.values(
+                  issue.fields.assignee?.avatarUrls ?? [],
+                )?.[0]?.match?.(
+                  /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
+                )?.[1],
+              ),
               parent: issue.fields.parent?.key,
               priority: issue.fields.priority?.name,
               blocks,
@@ -108,6 +115,7 @@
           .filter(
             (e) =>
               e.status !== "In Review" &&
+              e.status !== "Done" &&
               e.assignee !== "Jonathon Surratt",
           )
         document.getElementById("output").innerHTML = subtasks
@@ -160,10 +168,18 @@
 
         return `
     <div class="task ${statusClass} ${isBlocked ? "blocker" : ""}">
-      <a class="jira-link" href="${jiraUrl}" target="_blank">${task.key}</a>
-      ${isBlocked ? `<z class="blocked">🚨 Blocked by: ${task.blockedBy.join(", ")}</z>` : ""}
+      <a 
+      class="jira-link" 
+      href="${jiraUrl}" 
+      target="_blank" 
+      data-issue-key="${task.key}"
+    >
+      ${task.key}
+    </a>
+    ${isBlocked ? `<z class="blocked">🚨 Blocked by: ${task.blockedBy.join(", ")}</z>` : ""}
+      ${task.summary}
       <strong>Status:</strong> ${task.status}
-      <strong>Assignee:</strong> ${task.assignee || "Unassigned"}
+      <strong>Assignee:</strong> ${task.assignee || "Unassigned"} <img style='vertical-align: middle; margin-left: -2px; border-radius: 50%;' width=18px height=18px src="${task.assigneeUrl}"></img>
       <strong>Parent:</strong> ${task.parent}
     </div>
   `
