@@ -54,21 +54,173 @@
       .blocking {
         color: #bf2600;
       }
+      #output {
+        display: flex; /* horizontal layout */
+        flex-wrap: wrap; /* wrap to next line if too wide */
+        gap: 12px; /* space between tasks */
+      }
+      body {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        font-family: Arial, sans-serif;
+      }
+
+      .task {
+        flex: 0 0 auto; /* prevent stretching */
+        min-width: 250px; /* optional: minimum task width */
+        padding: 8px 12px;
+        border-radius: 6px;
+        border-left: 6px solid;
+        background: #f4f6f8;
+        line-height: 1.3;
+        background-color: #121212;
+      }
+      body {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        font-family: Arial, sans-serif;
+      }
+
+      #taskContainer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px;
+        background-color: #121212;
+      }
+      button {
+        background-color: #777;
+        border: 2px solid #666;
+        border-radius: 120px;
+      }
+      /* Task cards */
+      .task {
+        flex: 0 0 auto;
+        min-width: 250px;
+        padding: 12px;
+        border-radius: 8px;
+        background-color: #00000000;
+        border-left: 6px solid;
+        line-height: 1.3;
+        color: #e0e0e0;
+      }
+
+      .task.todo {
+        --c: #3880ff;
+      } /* blue-gray / To Do */
+      .task.progress {
+        --c: #ffb400;
+      } /* yellow / In Progress */
+      .task.done {
+        --c: #28a745;
+      } /* green / Done */
+      .task.blocker {
+        --c: #de350b;
+      }
+
+      .task {
+        border-left: 6px solid var(--c);
+        background-color: color-mix(
+          in srgb,
+          var(--c) 20%,
+          #1e1e1e 80%
+        );
+      }
+
+      /* .task.blocker {
+        box-shadow: 0 0 12px #a00;
+      } */
+
+      /* Jira links */
+      .jira-link,
+      .blocked a {
+        color: #74b9ff;
+        text-decoration: none;
+      }
+      .jira-link:hover,
+      .blocked a:hover {
+        text-decoration: underline;
+      }
+
+      /* Blocked section */
+      .blocked {
+        color: #ff6b6b;
+        font-weight: bold;
+        margin: 4px 0;
+      }
+
+      /* Avatars inline */
+      .task img {
+        vertical-align: middle;
+        margin-left: 6px;
+        border-radius: 50%;
+        border: 1px solid #555;
+      }
+
+      /* Tooltip for issue previews */
+      .tooltip {
+        position: absolute;
+        background: #333;
+        color: #e0e0e0;
+        border: 1px solid #555;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        max-width: 300px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+        z-index: 1000;
+      }
+      .tooltip.visible {
+        opacity: 1;
+      }
+      .tooltip .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 3px solid #555;
+        border-top-color: #74b9ff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        vertical-align: middle;
+        margin-left: 6px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
-    <h2>Jira Issue Fetch Example</h2>
-    <button onclick="getIssues()">Get My Issues</button>
-    <button onclick="loadJiraData()">
-      Load Projects + Status + Assignees
-    </button>
-    <button onclick="getSubtasks()">Load T1 Subtasks</button>
+    <button
+      id="toggleSelf"
+      onclick="toggleShowOnlySelf(this)"
+      onload="toggleShowOnlySelf(this)"
+    ></button>
     <pre id="output"></pre>
     <script src="./js globals/libloader.js"></script>
     <script src="./js globals/allfuncs.js"></script>
     <script src="./js globals/log.js"></script>
     <script src="./token.js"></script>
     <script>
+      const a = loadlib("allfuncs")
+      var uname = null
+      var tasks = {}
+      toggleShowOnlySelf(a.qs("#toggleSelf"))
+      function toggleShowOnlySelf(self) {
+        self.lastState = !(self.lastState ?? true)
+        showOnlySelf(self.lastState)
+        log(self)
+        self.textContent =
+          self.lastState ? "show all tasks" : "show only own tasks"
+      }
+      getCurrentUser().then((e) => {
+        uname = e.displayName
+        getSubtasks()
+      })
+      // var assigneeDict = {}
       async function getSubtasks() {
         const jql = `
           project = "T1"
@@ -112,15 +264,30 @@
               blockedBy,
             }
           })
-          .filter(
-            (e) =>
-              e.status !== "In Review" &&
-              e.status !== "Done" &&
-              e.assignee !== "Jonathon Surratt",
+          .sort(
+            (a, s) =>
+              Number(a.key.replace(/^T\d+-/, "")) -
+              Number(s.key.replace(/^T\d+-/, "")),
           )
+        // .filter(
+        //   (e) =>
+        //     e.status !== "In Review" &&
+        //     e.status !== "Done" &&
+        //     e.assignee !== "Jonathon Surratt",
+        // )
+        // for (var st of subtasks) {
+        //   assigneeDict[st.assignee] = {
+        //     assignee: st.assignee,
+        //     assigneeUrl: st.assigneeUrl,
+        //   }
+        // }
+        for (var v of subtasks) {
+          tasks[v.key] = v
+        }
         document.getElementById("output").innerHTML = subtasks
           .map(showTask)
           .join("")
+        // toggleShowOnlySelf(a.qs("#toggleSelf"))
       }
       //     function showTask({ key, assignee, status, summary, parent }) {
       //       return `
@@ -157,6 +324,40 @@
 
         return { blocks, blockedBy }
       }
+      async function getCurrentUser() {
+        const response = await globalrequest({
+          url: `https://${domain}/rest/api/3/myself`,
+          method: "GET",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+            Accept: "application/json",
+          },
+        })
+
+        if (response.status !== 200) {
+          throw new Error("Failed to get current user")
+        }
+
+        const data = JSON.parse(response.text)
+        return {
+          username: data.name || data.displayName || null,
+          displayName: data.displayName || null,
+          accountId: data.accountId || null,
+        }
+      }
+      function showOnlySelf(on) {
+        a.qsa(".task").map(
+          (e) =>
+            (e.style.display =
+              (
+                !on ||
+                uname ==
+                  tasks[e.getAttribute("data-task-key")].assignee
+              ) ?
+                "block"
+              : "none"),
+        )
+      }
       function showTask(task) {
         const jiraUrl = `https://${domain}/browse/${task.key}`
         const isBlocked = task.blockedBy.length > 0
@@ -167,24 +368,29 @@
         else if (task.statusCategory === "Done") statusClass = "done"
 
         return `
-    <div class="task ${statusClass} ${isBlocked ? "blocker" : ""}">
-      <a 
-      class="jira-link" 
-      href="${jiraUrl}" 
-      target="_blank" 
-      data-issue-key="${task.key}"
-    >
-      ${task.key}
-    </a>
-    ${isBlocked ? `<z class="blocked">🚨 Blocked by: ${task.blockedBy.join(", ")}</z>` : ""}
-      ${task.summary}
-      <strong>Status:</strong> ${task.status}
-      <strong>Assignee:</strong> ${task.assignee || "Unassigned"} <img style='vertical-align: middle; margin-left: -2px; border-radius: 50%;' width=18px height=18px src="${task.assigneeUrl}"></img>
-      <strong>Parent:</strong> ${task.parent}
-    </div>
+  <div class="task ${statusClass} ${isBlocked ? "blocker" : ""}" data-task-key="${task.key}">
+    <a 
+    class="jira-link" 
+    href="${jiraUrl}" 
+    target="_blank" 
+  >${task.key}</a>${
+    isBlocked ?
+      `
+   🚨 Blocked by: ${task.blockedBy
+     .map(
+       (key) =>
+         `<a href="https://${domain}/browse/${key}" target="_blank">${key}</a>`,
+     )
+     .join(", ")}`
+    : ""
+  }
+    ${task.summary}
+    <strong>Status:</strong> ${task.status}
+    <strong>Assignee:</strong> ${task.assignee || "Unassigned"} <img style='vertical-align: middle; margin-left: -2px; border-radius: 50%;' width=18px height=18px src="${task.assigneeUrl}"></img>
+    <strong>Parent:</strong> ${task.parent}
+  </div>
   `
       }
-      const a = loadlib("allfuncs")
       async function getAllProjects() {
         const res = await globalrequest({
           url: `https://${domain}/rest/api/3/project/search`,
@@ -235,52 +441,6 @@
         })
 
         return Array.from(assignees.values())
-      }
-      async function getIssues() {
-        const jql = `
-          project = "ABC"
-          AND status IN ("To Do", "In Progress")
-          AND assignee = currentUser()
-          ORDER BY updated DESC
-        `
-
-        // const data = JSON.parse(
-        //   (
-        //     await globalrequest({
-        //       url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=50&startAt=0`,
-        //       method: "GET",
-        //       headers: {
-        //         Authorization:
-        //           "Basic " + btoa(email + ":" + apiToken),
-        //         Accept: "application/json",
-        //       },
-        //     })
-        //   ).text,
-        // )
-
-        // document.getElementById("output").textContent =
-        //   JSON.stringify(data, null, 2)
-      }
-      async function loadJiraData() {
-        const output = {}
-
-        const projects = await getAllProjects()
-
-        for (const project of projects) {
-          const statuses = await getProjectStatuses(project.id)
-          const assignees = await getProjectAssignees(project.key)
-
-          output[project.key] = {
-            name: project.name,
-            statuses: statuses.flatMap((s) =>
-              s.statuses.map((st) => st.name),
-            ),
-            assignees: assignees,
-          }
-        }
-
-        document.getElementById("output").textContent =
-          JSON.stringify(output, null, 2)
       }
     </script>
   </body>
