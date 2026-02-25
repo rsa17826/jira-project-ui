@@ -196,7 +196,12 @@
   <body>
     <button
       id="toggleSelf"
-      onclick="toggleShowOnlySelf(this)"
+      onclick="
+        localStorage.lastSelfShownState = !(
+          localStorage.lastSelfShownState === 'true'
+        )
+        toggleShowOnlySelf(this)
+      "
       onload="toggleShowOnlySelf(this)"
     ></button>
     <pre id="output"></pre>
@@ -208,13 +213,16 @@
       const a = loadlib("allfuncs")
       var uname = null
       var tasks = {}
+      localStorage.lastSelfShownState ??= false
       toggleShowOnlySelf(a.qs("#toggleSelf"))
+
       function toggleShowOnlySelf(self) {
-        self.lastState = !(self.lastState ?? true)
-        showOnlySelf(self.lastState)
+        showOnlySelf(localStorage.lastSelfShownState === "true")
         log(self)
         self.textContent =
-          self.lastState ? "show all tasks" : "show only own tasks"
+          localStorage.lastSelfShownState === "true" ?
+            "show all tasks"
+          : "show only own tasks"
       }
       getCurrentUser().then((e) => {
         uname = e.displayName
@@ -287,7 +295,8 @@
         document.getElementById("output").innerHTML = subtasks
           .map(showTask)
           .join("")
-        // toggleShowOnlySelf(a.qs("#toggleSelf"))
+        if (localStorage.lastSelfShownState === "true")
+          toggleShowOnlySelf(a.qs("#toggleSelf"))
       }
       //     function showTask({ key, assignee, status, summary, parent }) {
       //       return `
