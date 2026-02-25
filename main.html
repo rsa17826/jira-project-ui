@@ -358,6 +358,7 @@
               : "none"),
         )
       }
+
       function showTask(task) {
         const jiraUrl = `https://${domain}/browse/${task.key}`
         const isBlocked = task.blockedBy.length > 0
@@ -377,10 +378,13 @@
     isBlocked ?
       `
    🚨 Blocked by: ${task.blockedBy
-     .map(
-       (key) =>
-         `<a href="https://${domain}/browse/${key}" target="_blank">${key}</a>`,
-     )
+     .map((key) => {
+       const blocker = tasks[key] // lookup in your dict
+       const name = blocker?.assignee || "Unknown"
+       const avatar =
+         blocker?.assigneeUrl || "https://via.placeholder.com/20"
+       return `<a href="https://${domain}/browse/${key}" target="_blank" class="blocker-link">${key} <img src="${avatar}" width="20" height="20" style="vertical-align: middle; border-radius:50%; margin-left:4px;" alt="${name}" title="${name}" /></a>`
+     })
      .join(", ")}`
     : ""
   }
