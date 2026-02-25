@@ -1,0 +1,271 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Jira API Test</title>
+    <style>
+      .task {
+        padding: 8px 12px; /* a bit tighter padding */
+        margin-bottom: 8px; /* less vertical space between tasks */
+        border-radius: 6px;
+        border-left: 6px solid;
+        background: #f4f6f8;
+        font-family: Arial, sans-serif;
+        line-height: 0.7; /* tighter line height */
+      }
+
+      .jira-link {
+        text-decoration: none;
+        font-weight: bold;
+        color: #0747a6;
+        display: inline-block;
+        margin-bottom: 2px;
+      }
+
+      .blocked {
+        color: #de350b;
+        font-weight: bold;
+      }
+
+      /* Reduce spacing for the detail lines */
+      .task > div {
+        margin: 2px 0;
+      }
+
+      .todo {
+        border-color: #6b778c;
+      }
+      .progress {
+        border-color: #ffab00;
+      }
+      .done {
+        border-color: #36b37e;
+      }
+
+      .blocker {
+        border-color: #de350b !important;
+        background: #ffebe6;
+      }
+
+      .blocked {
+        color: #de350b;
+        font-weight: bold;
+      }
+
+      .blocking {
+        color: #bf2600;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Jira Issue Fetch Example</h2>
+    <button onclick="getIssues()">Get My Issues</button>
+    <button onclick="loadJiraData()">
+      Load Projects + Status + Assignees
+    </button>
+    <button onclick="getSubtasks()">Load T1 Subtasks</button>
+    <pre id="output"></pre>
+    <script src="./js globals/libloader.js"></script>
+    <script src="./js globals/allfuncs.js"></script>
+    <script src="./js globals/log.js"></script>
+    <script src="./token.js"></script>
+    <script>
+      async function getSubtasks() {
+        const jql = `
+          project = "T1"
+          AND issuetype IN subTaskIssueTypes()
+          ORDER BY created DESC
+        `
+
+        const res = await globalrequest({
+          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,parent,issuetype,priority,issuelinks`,
+          method: "GET",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+            Accept: "application/json",
+          },
+        })
+
+        const data = JSON.parse(res.text)
+
+        const subtasks = data.issues
+          .filter((issue) => issue.fields.issuetype.subtask)
+          .map((issue) => {
+            const { blocks, blockedBy } = extractBlockInfo(issue)
+
+            return {
+              key: issue.key,
+              summary: issue.fields.summary,
+              status: issue.fields.status?.name,
+              statusCategory:
+                issue.fields.status?.statusCategory?.name,
+              assignee: issue.fields.assignee?.displayName,
+              parent: issue.fields.parent?.key,
+              priority: issue.fields.priority?.name,
+              blocks,
+              blockedBy,
+            }
+          })
+          .filter(
+            (e) =>
+              e.status !== "In Review" &&
+              e.assignee !== "Jonathon Surratt",
+          )
+        document.getElementById("output").innerHTML = subtasks
+          .map(showTask)
+          .join("")
+      }
+      //     function showTask({ key, assignee, status, summary, parent }) {
+      //       return `
+      //   <div class="task">
+      //     <h3>${key}</h3>
+      //     <strong>Summary:</strong> ${summary || "(No summary)"}
+      //     <strong>Status:</strong> ${status}
+      //     <strong>Assignee:</strong> ${assignee || "Unassigned"}
+      //     <strong>Parent:</strong> ${parent}
+      //     <a href="https://itp251.atlassian.net/jira/software/projects/T1/boards/67?selectedIssue=${key}">asd</a>
+      //     <hr>
+      //   </div>
+      // `
+      //     }
+      function extractBlockInfo(issue) {
+        const links = issue.fields.issuelinks || []
+
+        const blocks = []
+        const blockedBy = []
+
+        links.forEach((link) => {
+          if (link.type?.name === "Blocks") {
+            if (link.outwardIssue) {
+              // This issue BLOCKS another issue
+              blocks.push(link.outwardIssue.key)
+            }
+
+            if (link.inwardIssue) {
+              // This issue IS BLOCKED BY another issue
+              blockedBy.push(link.inwardIssue.key)
+            }
+          }
+        })
+
+        return { blocks, blockedBy }
+      }
+      function showTask(task) {
+        const jiraUrl = `https://${domain}/browse/${task.key}`
+        const isBlocked = task.blockedBy.length > 0
+
+        let statusClass = "todo"
+        if (task.statusCategory === "In Progress")
+          statusClass = "progress"
+        else if (task.statusCategory === "Done") statusClass = "done"
+
+        return `
+    <div class="task ${statusClass} ${isBlocked ? "blocker" : ""}">
+      <a class="jira-link" href="${jiraUrl}" target="_blank">${task.key}</a>
+      ${isBlocked ? `<div class="blocked">🚨 Blocked by: ${task.blockedBy.join(", ")}</div>` : ""}
+      <div><strong>Status:</strong> ${task.status}</div>
+      <div><strong>Assignee:</strong> ${task.assignee || "Unassigned"}</div>
+      <div><strong>Parent:</strong> ${task.parent}</div>
+    </div>
+  `
+      }
+      const a = loadlib("allfuncs")
+      async function getAllProjects() {
+        const res = await globalrequest({
+          url: `https://${domain}/rest/api/3/project/search`,
+          method: "GET",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+            Accept: "application/json",
+          },
+        })
+
+        return JSON.parse(res.text).values
+      }
+      async function getProjectStatuses(projectId) {
+        const res = await globalrequest({
+          url: `https://${domain}/rest/api/3/project/${projectId}/statuses`,
+          method: "GET",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+            Accept: "application/json",
+          },
+        })
+
+        return JSON.parse(res.text)
+      }
+      async function getProjectAssignees(projectKey) {
+        const jql = `project = "${projectKey}" AND assignee IS NOT EMPTY`
+
+        const res = await globalrequest({
+          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
+            jql,
+          )}&fields=assignee&maxResults=100`,
+          method: "GET",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+            Accept: "application/json",
+          },
+        })
+
+        const data = JSON.parse(res.text)
+
+        const assignees = new Map()
+
+        data.issues.forEach((issue) => {
+          const user = issue.fields.assignee
+          if (user) {
+            assignees.set(user.accountId, user.displayName)
+          }
+        })
+
+        return Array.from(assignees.values())
+      }
+      async function getIssues() {
+        const jql = `
+          project = "ABC"
+          AND status IN ("To Do", "In Progress")
+          AND assignee = currentUser()
+          ORDER BY updated DESC
+        `
+
+        // const data = JSON.parse(
+        //   (
+        //     await globalrequest({
+        //       url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=50&startAt=0`,
+        //       method: "GET",
+        //       headers: {
+        //         Authorization:
+        //           "Basic " + btoa(email + ":" + apiToken),
+        //         Accept: "application/json",
+        //       },
+        //     })
+        //   ).text,
+        // )
+
+        // document.getElementById("output").textContent =
+        //   JSON.stringify(data, null, 2)
+      }
+      async function loadJiraData() {
+        const output = {}
+
+        const projects = await getAllProjects()
+
+        for (const project of projects) {
+          const statuses = await getProjectStatuses(project.id)
+          const assignees = await getProjectAssignees(project.key)
+
+          output[project.key] = {
+            name: project.name,
+            statuses: statuses.flatMap((s) =>
+              s.statuses.map((st) => st.name),
+            ),
+            assignees: assignees,
+          }
+        }
+
+        document.getElementById("output").textContent =
+          JSON.stringify(output, null, 2)
+      }
+    </script>
+  </body>
+</html>
