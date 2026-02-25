@@ -301,7 +301,7 @@
             ] ?? v.assigneeUrl
           tasks[v.key] = v
         }
-        document.getElementById("output").innerHTML = subtasks
+        a.qs("#output").innerHTML = subtasks
           .map(showTask)
           .join("")
         if (localStorage.lastSelfShownState === "true")
