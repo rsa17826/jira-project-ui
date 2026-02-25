@@ -47,411 +47,408 @@
       </defs>
     </svg>
     <script>
+      const a = loadlib("allfuncs")
       var uname = null
       var email = null
       var tasks = {}
-      ;(async () => {
-        function resizeSvg() {
-          const svg = a.qs("#arrowsLayer")
-          svg.style.height =
-            document.documentElement.scrollHeight + "px"
-        }
+      toggleShowOnlySelf(a.qs("#toggleSelf"))
 
-        window.addEventListener("load", resizeSvg)
-        window.addEventListener("resize", resizeSvg)
-        window.addEventListener("scroll", resizeSvg)
-        const a = loadlib("allfuncs")
-        await a.waituntil(() => window.globalrequest)
-
-        localStorage.lastSelfShownState ??= "true"
-        toggleShowOnlySelf(a.qs("#toggleSelf"))
-
-        function toggleShowOnlySelf(self) {
-          showOnlySelf(localStorage.lastSelfShownState === "true")
-          log(self)
-          self.textContent =
-            localStorage.lastSelfShownState === "true" ?
-              "show all tasks"
-            : "show only own tasks"
-        }
-        getCurrentUser().then((e) => {
-          uname = e.displayName
-          email = e.emailAddress
-          getSubtasks()
-        })
-        // var assigneeDict = {}
-        async function getSubtasks() {
-          const jql = `
+      function toggleShowOnlySelf(self) {
+        showOnlySelf(localStorage.lastSelfShownState === "true")
+        log(self)
+        self.textContent =
+          localStorage.lastSelfShownState === "true" ?
+            "show all tasks"
+          : "show only own tasks"
+      }
+      // var assigneeDict = {}
+      async function getSubtasks() {
+        const jql = `
           project = "${currentProject}"
           AND issuetype IN subTaskIssueTypes()
           ORDER BY created DESC
         `
 
-          const res = await globalrequest({
-            url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,parent,issuetype,priority,issuelinks`,
-            method: "GET",
-            headers: {
-              Authorization: "Basic " + btoa(email + ":" + apiToken),
-              Accept: "application/json",
-            },
-          })
+        const res = await globalrequest({
+          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,parent,issuetype,priority,issuelinks`,
+          method: "GET",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+            Accept: "application/json",
+          },
+        })
 
-          const data = JSON.parse(res.text)
+        const data = JSON.parse(res.text)
 
-          const subtasks = data.issues
-            .filter((issue) => issue.fields.issuetype.subtask)
-            .map((issue) => {
-              const { blocks, blockedBy } = extractBlockInfo(issue)
-              log(issue)
-              return {
-                key: issue.key,
-                summary: issue.fields.summary,
-                status: issue.fields.status?.name,
-                statusCategory:
-                  issue.fields.status?.statusCategory?.name,
-                assignee: issue.fields.assignee?.displayName,
-                assigneeUrl: unescape(
-                  Object.values(
-                    issue.fields.assignee?.avatarUrls ?? [],
-                  )?.[0]?.match?.(
-                    /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
-                  )?.[1],
-                ),
-                parent: issue.fields.parent?.key,
-                priority: issue.fields.priority?.name,
-                blocks,
-                blockedBy,
-              }
-            })
-            .sort(
-              (a, s) =>
-                Number(a.key.replace(/^T\d+-/, "")) -
-                Number(s.key.replace(/^T\d+-/, "")),
-            )
-          // .filter(
-          //   (e) =>
-          //     e.status !== "In Review" &&
-          //     e.status !== "Done"
-          // )
-          // for (var st of subtasks) {
-          //   assigneeDict[st.assignee] = {
-          //     assignee: st.assignee,
-          //     assigneeUrl: st.assigneeUrl,
-          //   }
-          // }
-          for (var v of subtasks) {
-            v.assigneeUrl =
-              imageReplaces[
-                v.assigneeUrl
-                  .replace(
-                    "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/",
-                    "",
-                  )
-                  .replace(/-\d+\.png$/, "")
-              ] ?? v.assigneeUrl
-            tasks[v.key] = v
-          }
-          a.qs("#output").innerHTML = subtasks.map(showTask).join("")
-          if (localStorage.lastSelfShownState === "true")
-            toggleShowOnlySelf(a.qs("#toggleSelf"))
-          drawAllDependencies()
-        }
-        //     function showTask({ key, assignee, status, summary, parent }) {
-        //       return `
-        //   <div class="task">
-        //     <h3>${key}</h3>
-        //     <strong>Summary:</strong> ${summary || "(No summary)"}
-        //     <strong>Status:</strong> ${status}
-        //     <strong>Assignee:</strong> ${assignee || "Unassigned"}
-        //     <strong>Parent:</strong> ${parent}
-        //     <a href="https://itp251.atlassian.net/jira/software/projects/T1/boards/67?selectedIssue=${key}">asd</a>
-        //     <hr>
-        //   </div>
-        // `
-        //     }
-        function extractBlockInfo(issue) {
-          const links = issue.fields.issuelinks || []
-
-          const blocks = []
-          const blockedBy = []
-
-          links.forEach((link) => {
-            if (link.type?.name === "Blocks") {
-              if (link.outwardIssue) {
-                // This issue BLOCKS another issue
-                blocks.push(link.outwardIssue.key)
-              }
-
-              if (link.inwardIssue) {
-                // This issue IS BLOCKED BY another issue
-                blockedBy.push(link.inwardIssue.key)
-              }
+        const subtasks = data.issues
+          .filter((issue) => issue.fields.issuetype.subtask)
+          .map((issue) => {
+            const { blocks, blockedBy } = extractBlockInfo(issue)
+            log(issue)
+            return {
+              key: issue.key,
+              summary: issue.fields.summary,
+              status: issue.fields.status?.name,
+              statusCategory:
+                issue.fields.status?.statusCategory?.name,
+              assignee: issue.fields.assignee?.displayName,
+              assigneeUrl: unescape(
+                Object.values(
+                  issue.fields.assignee?.avatarUrls ?? [],
+                )?.[0]?.match?.(
+                  /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
+                )?.[1],
+              ),
+              parent: issue.fields.parent?.key,
+              priority: issue.fields.priority?.name,
+              blocks,
+              blockedBy,
             }
           })
-
-          return { blocks, blockedBy }
-        }
-        async function getCurrentUser() {
-          const response = await globalrequest({
-            url: `https://${domain}/rest/api/3/myself`,
-            method: "GET",
-            headers: {
-              Authorization: "Basic " + btoa(email + ":" + apiToken),
-              Accept: "application/json",
-            },
-          })
-
-          if (response.status !== 200) {
-            throw new Error("Failed to get current user")
-          }
-
-          const data = JSON.parse(response.text)
-          return {
-            username: data.name || data.displayName || null,
-            displayName: data.displayName || null,
-            accountId: data.accountId || null,
-          }
-        }
-        function showOnlySelf(on) {
-          a.qsa(".task").map(
-            (e) =>
-              (e.style.display =
-                (
-                  !on ||
-                  uname ==
-                    tasks[e.getAttribute("data-task-key")].assignee
-                ) ?
-                  "block"
-                : "none"),
+          .sort(
+            (a, s) =>
+              Number(a.key.replace(/^T\d+-/, "")) -
+              Number(s.key.replace(/^T\d+-/, "")),
           )
-          drawAllDependencies()
+        // .filter(
+        //   (e) =>
+        //     e.status !== "In Review" &&
+        //     e.status !== "Done"
+        // )
+        // for (var st of subtasks) {
+        //   assigneeDict[st.assignee] = {
+        //     assignee: st.assignee,
+        //     assigneeUrl: st.assigneeUrl,
+        //   }
+        // }
+        for (var v of subtasks) {
+          v.assigneeUrl =
+            imageReplaces[
+              v.assigneeUrl
+                .replace(
+                  "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/",
+                  "",
+                )
+                .replace(/-\d+\.png$/, "")
+            ] ?? v.assigneeUrl
+          tasks[v.key] = v
+        }
+        a.qs("#output").innerHTML = subtasks.map(showTask).join("")
+        if (localStorage.lastSelfShownState === "true")
+          toggleShowOnlySelf(a.qs("#toggleSelf"))
+        drawAllDependencies()
+      }
+      //     function showTask({ key, assignee, status, summary, parent }) {
+      //       return `
+      //   <div class="task">
+      //     <h3>${key}</h3>
+      //     <strong>Summary:</strong> ${summary || "(No summary)"}
+      //     <strong>Status:</strong> ${status}
+      //     <strong>Assignee:</strong> ${assignee || "Unassigned"}
+      //     <strong>Parent:</strong> ${parent}
+      //     <a href="https://itp251.atlassian.net/jira/software/projects/T1/boards/67?selectedIssue=${key}">asd</a>
+      //     <hr>
+      //   </div>
+      // `
+      //     }
+      function extractBlockInfo(issue) {
+        const links = issue.fields.issuelinks || []
+
+        const blocks = []
+        const blockedBy = []
+
+        links.forEach((link) => {
+          if (link.type?.name === "Blocks") {
+            if (link.outwardIssue) {
+              // This issue BLOCKS another issue
+              blocks.push(link.outwardIssue.key)
+            }
+
+            if (link.inwardIssue) {
+              // This issue IS BLOCKED BY another issue
+              blockedBy.push(link.inwardIssue.key)
+            }
+          }
+        })
+
+        return { blocks, blockedBy }
+      }
+      async function getCurrentUser() {
+        const response = await globalrequest({
+          url: `https://${domain}/rest/api/3/myself`,
+          method: "GET",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+            Accept: "application/json",
+          },
+        })
+
+        if (response.status !== 200) {
+          throw new Error("Failed to get current user")
         }
 
-        function showTask(task) {
-          const jiraUrl = `https://${domain}/browse/${task.key}`
-          const isBlocked = task.blockedBy.length > 0
+        const data = JSON.parse(response.text)
+        return {
+          username: data.name || data.displayName || null,
+          displayName: data.displayName || null,
+          accountId: data.accountId || null,
+        }
+      }
+      function showOnlySelf(on) {
+        a.qsa(".task").map(
+          (e) =>
+            (e.style.display =
+              (
+                !on ||
+                uname ==
+                  tasks[e.getAttribute("data-task-key")].assignee
+              ) ?
+                "block"
+              : "none"),
+        )
+        drawAllDependencies()
+      }
 
-          let statusClass = "todo"
-          if (task.statusCategory === "In Progress")
-            statusClass = "progress"
-          else if (task.statusCategory === "Done")
-            statusClass = "done"
+      function showTask(task) {
+        const jiraUrl = `https://${domain}/browse/${task.key}`
+        const isBlocked = task.blockedBy.length > 0
 
-          return `<div class="task ${statusClass}${isBlocked ? " blocker" : ""}" data-task-key="${task.key}"><a 
+        let statusClass = "todo"
+        if (task.statusCategory === "In Progress")
+          statusClass = "progress"
+        else if (task.statusCategory === "Done") statusClass = "done"
+
+        return `<div class="task ${statusClass}${isBlocked ? " blocker" : ""}" data-task-key="${task.key}"><a 
 class="jira-link" 
 href="${jiraUrl}" 
 target="_blank" 
 >${task.key}</a>${
-            isBlocked ?
-              `
+          isBlocked ?
+            `
 🚨 Blocked by: ${task.blockedBy
-                .map((key) => {
-                  const blocker = tasks[key] // lookup in your dict
-                  const name = blocker?.assignee || "Unknown"
-                  const avatar = blocker?.assigneeUrl || "about:blank"
-                  return `<a href="https://${domain}/browse/${key}" target="_blank" class="blocker-link">${key}<img src="${avatar}" width="20" height="20" style="vertical-align: middle; border-radius:50%; margin-left:4px;" alt="${name}" title="${name}" /></a>`
-                })
-                .join(", ")}`
-            : ""
-          }
+              .map((key) => {
+                const blocker = tasks[key] // lookup in your dict
+                const name = blocker?.assignee || "Unknown"
+                const avatar = blocker?.assigneeUrl || "about:blank"
+                return `<a href="https://${domain}/browse/${key}" target="_blank" class="blocker-link">${key}<img src="${avatar}" width="20" height="20" style="vertical-align: middle; border-radius:50%; margin-left:4px;" alt="${name}" title="${name}" /></a>`
+              })
+              .join(", ")}`
+          : ""
+        }
 ${task.summary}
 <strong>Status:</strong> ${task.status}
 <strong>Assignee:</strong> ${task.assignee || "Unassigned"} <img style='vertical-align: middle; margin-left: -2px; border-radius: 50%;' width=18px height=18px src="${task.assigneeUrl}"></img>
 <strong>Parent:</strong> ${task.parent}</div>`
-        }
-        async function getAllProjects() {
-          const res = await globalrequest({
-            url: `https://${domain}/rest/api/3/project/search`,
-            method: "GET",
-            headers: {
-              Authorization: "Basic " + btoa(email + ":" + apiToken),
-              Accept: "application/json",
-            },
-          })
+      }
+      async function getAllProjects() {
+        const res = await globalrequest({
+          url: `https://${domain}/rest/api/3/project/search`,
+          method: "GET",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+            Accept: "application/json",
+          },
+        })
 
-          return JSON.parse(res.text).values
-        }
-        async function getProjectStatuses(projectId) {
-          const res = await globalrequest({
-            url: `https://${domain}/rest/api/3/project/${projectId}/statuses`,
-            method: "GET",
-            headers: {
-              Authorization: "Basic " + btoa(email + ":" + apiToken),
-              Accept: "application/json",
-            },
-          })
+        return JSON.parse(res.text).values
+      }
+      async function getProjectStatuses(projectId) {
+        const res = await globalrequest({
+          url: `https://${domain}/rest/api/3/project/${projectId}/statuses`,
+          method: "GET",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+            Accept: "application/json",
+          },
+        })
 
-          return JSON.parse(res.text)
-        }
-        async function getProjectAssignees(projectKey) {
-          const jql = `project = "${projectKey}" AND assignee IS NOT EMPTY`
+        return JSON.parse(res.text)
+      }
+      async function getProjectAssignees(projectKey) {
+        const jql = `project = "${projectKey}" AND assignee IS NOT EMPTY`
 
-          const res = await globalrequest({
-            url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
-              jql,
-            )}&fields=assignee&maxResults=100`,
-            method: "GET",
-            headers: {
-              Authorization: "Basic " + btoa(email + ":" + apiToken),
-              Accept: "application/json",
-            },
-          })
+        const res = await globalrequest({
+          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
+            jql,
+          )}&fields=assignee&maxResults=100`,
+          method: "GET",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+            Accept: "application/json",
+          },
+        })
 
-          const data = JSON.parse(res.text)
+        const data = JSON.parse(res.text)
 
-          const assignees = new Map()
+        const assignees = new Map()
 
-          data.issues.forEach((issue) => {
-            const user = issue.fields.assignee
-            if (user) {
-              assignees.set(user.accountId, user.displayName)
-            }
-          })
-
-          return Array.from(assignees.values())
-        }
-        function getTaskCenter(el) {
-          const rect = el.getBoundingClientRect()
-          return {
-            x: rect.left + rect.width / 2 + window.scrollX,
-            y: rect.top + rect.height / 2 + window.scrollY,
+        data.issues.forEach((issue) => {
+          const user = issue.fields.assignee
+          if (user) {
+            assignees.set(user.accountId, user.displayName)
           }
+        })
+
+        return Array.from(assignees.values())
+      }
+      function getTaskCenter(el) {
+        const rect = el.getBoundingClientRect()
+        return {
+          x: rect.left + rect.width / 2 + window.scrollX,
+          y: rect.top + rect.height / 2 + window.scrollY,
         }
-        function hashStringToInt(str) {
-          let hash = 0
-          for (let i = 0; i < str.length; i++) {
-            hash = (hash * 31 + str.charCodeAt(i)) >>> 0
-          }
-          return hash
+      }
+      function hashStringToInt(str) {
+        let hash = 0
+        for (let i = 0; i < str.length; i++) {
+          hash = (hash * 31 + str.charCodeAt(i)) >>> 0
         }
-        function getEdgePoint(fromEl, toEl) {
-          const rectFrom = fromEl.getBoundingClientRect()
-          const rectTo = toEl.getBoundingClientRect()
-          const inset = 0 // 10px inside the div
+        return hash
+      }
+      function getEdgePoint(fromEl, toEl) {
+        const rectFrom = fromEl.getBoundingClientRect()
+        const rectTo = toEl.getBoundingClientRect()
+        const inset = 0 // 10px inside the div
 
-          // Compute horizontal/vertical centers
-          const fromCenterX =
-            rectFrom.left + rectFrom.width / 2 + window.scrollX
-          const fromCenterY =
-            rectFrom.top + rectFrom.height / 2 + window.scrollY
-          const toCenterX =
-            rectTo.left + rectTo.width / 2 + window.scrollX
-          const toCenterY =
-            rectTo.top + rectTo.height / 2 + window.scrollY
+        // Compute horizontal/vertical centers
+        const fromCenterX =
+          rectFrom.left + rectFrom.width / 2 + window.scrollX
+        const fromCenterY =
+          rectFrom.top + rectFrom.height / 2 + window.scrollY
+        const toCenterX =
+          rectTo.left + rectTo.width / 2 + window.scrollX
+        const toCenterY =
+          rectTo.top + rectTo.height / 2 + window.scrollY
 
-          let x, y
+        let x, y
 
-          const dx = toCenterX - fromCenterX
-          const dy = toCenterY - fromCenterY
-          const absDx = Math.abs(dx)
-          const absDy = Math.abs(dy)
-          var side
-          if (absDx > absDy) {
-            // horizontal connection
-            x =
-              dx > 0 ?
-                rectFrom.right - inset + window.scrollX
-              : rectFrom.left + inset + window.scrollX
-            y = fromCenterY
-            side = "x"
-          } else {
-            // vertical connection
-            side = "y"
-            x = fromCenterX
-            y =
-              dy > 0 ?
-                rectFrom.bottom - inset + window.scrollY
-              : rectFrom.top + inset + window.scrollY
-          }
-
-          return { x, y, side }
+        const dx = toCenterX - fromCenterX
+        const dy = toCenterY - fromCenterY
+        const absDx = Math.abs(dx)
+        const absDy = Math.abs(dy)
+        var side
+        if (absDx > absDy) {
+          // horizontal connection
+          x =
+            dx > 0 ?
+              rectFrom.right - inset + window.scrollX
+            : rectFrom.left + inset + window.scrollX
+          y = fromCenterY
+          side = "x"
+        } else {
+          // vertical connection
+          side = "y"
+          x = fromCenterX
+          y =
+            dy > 0 ?
+              rectFrom.bottom - inset + window.scrollY
+            : rectFrom.top + inset + window.scrollY
         }
-        function drawArrowEdge(fromEl, toEl, taskKey) {
-          const svg = document.getElementById("arrowsLayer")
 
-          const start = getEdgePoint(fromEl, toEl)
-          const end = getEdgePoint(toEl, fromEl) // target inset
+        return { x, y, side }
+      }
+      function drawArrowEdge(fromEl, toEl, taskKey) {
+        const svg = document.getElementById("arrowsLayer")
 
-          // perpendicular offset (smaller for short lines, bigger for longer)
-          // const offset = Math.min(50, Math.sqrt(dx * dx + dy * dy) / 3)
-          const rect = fromEl.getBoundingClientRect()
-          const path = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "path",
+        const start = getEdgePoint(fromEl, toEl)
+        const end = getEdgePoint(toEl, fromEl) // target inset
+
+        // perpendicular offset (smaller for short lines, bigger for longer)
+        // const offset = Math.min(50, Math.sqrt(dx * dx + dy * dy) / 3)
+        const rect = fromEl.getBoundingClientRect()
+        const path = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "path",
+        )
+        const seed = hashStringToInt(taskKey) // convert ID to number
+
+        if (start.side === "x") {
+          end.y += randomIntFromSeed(
+            seed,
+            -rect.height / 2,
+            rect.height / 2,
+          ) // different for end
+        } else {
+          end.x += randomIntFromSeed(
+            seed,
+            -rect.width / 2,
+            rect.width / 2,
           )
-          const seed = hashStringToInt(taskKey) // convert ID to number
+        }
+        path.setAttribute(
+          "d",
+          `M ${start.x},${start.y} ${end.x},${end.y}`,
+        )
+        // path.setAttribute("stroke", "#de350b")
+        path.setAttribute(
+          "stroke",
+          getComputedStyle(toEl)
+            .borderLeftColor.replace("rgb", "rgba")
+            .replace(")", ", .5)"),
+        )
+        path.setAttribute("stroke-width", "2")
+        path.setAttribute("fill", "none")
+        path.setAttribute("marker-end", "url(#arrowhead)")
 
-          if (start.side === "x") {
-            end.y += randomIntFromSeed(
-              seed,
-              -rect.height / 2,
-              rect.height / 2,
-            ) // different for end
-          } else {
-            end.x += randomIntFromSeed(
-              seed,
-              -rect.width / 2,
-              rect.width / 2,
+        svg.appendChild(path)
+      }
+      function drawAllDependencies() {
+        const svg = document.getElementById("arrowsLayer")
+        svg.innerHTML = svg.querySelector("defs").outerHTML // reset but keep arrowhead
+
+        document.querySelectorAll(".task").forEach((taskDiv) => {
+          const taskKey = taskDiv.getAttribute("data-task-key")
+          const task = tasks[taskKey]
+
+          if (!task.blockedBy || task.blockedBy.length === 0) return
+
+          var blockerLinks = a.qsa(".blocker-link", taskDiv)
+          task.blockedBy.forEach((blockerKey) => {
+            const blockerDiv = document.querySelector(
+              `[data-task-key="${blockerKey}"]`,
             )
-          }
-          path.setAttribute(
-            "d",
-            `M ${start.x},${start.y} ${end.x},${end.y}`,
-          )
-          // path.setAttribute("stroke", "#de350b")
-          path.setAttribute(
-            "stroke",
-            getComputedStyle(toEl).borderLeftColor.replace("rgb", "rgba").replace(")", ", .5)"),
-          )
-          path.setAttribute("stroke-width", "2")
-          path.setAttribute("fill", "none")
-          path.setAttribute("marker-end", "url(#arrowhead)")
-
-          svg.appendChild(path)
-        }
-        function drawAllDependencies() {
-          const svg = document.getElementById("arrowsLayer")
-          svg.innerHTML = svg.querySelector("defs").outerHTML // reset but keep arrowhead
-
-          document.querySelectorAll(".task").forEach((taskDiv) => {
-            const taskKey = taskDiv.getAttribute("data-task-key")
-            const task = tasks[taskKey]
-
-            if (!task.blockedBy || task.blockedBy.length === 0) return
-
-            var blockerLinks = a.qsa(".blocker-link", taskDiv)
-            task.blockedBy.forEach((blockerKey) => {
-              const blockerDiv = document.querySelector(
-                `[data-task-key="${blockerKey}"]`,
-              )
-              if (blockerDiv)
-                drawArrowEdge(
-                  blockerLinks.find(
-                    (e) => e.textContent == blockerKey,
-                  ),
-                  blockerDiv,
-                  taskDiv.getAttribute("data-task-key"),
-                ) // blocked → blocker
-            })
+            if (blockerDiv)
+              drawArrowEdge(
+                blockerLinks.find((e) => e.textContent == blockerKey),
+                blockerDiv,
+                taskDiv.getAttribute("data-task-key"),
+              ) // blocked → blocker
           })
+        })
+      }
+      window.addEventListener("resize", drawAllDependencies)
+      function mulberry32(seed) {
+        return function () {
+          seed |= 0
+          seed = (seed + 0x6d2b79f5) | 0
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296
         }
-        window.addEventListener("resize", drawAllDependencies)
-        function mulberry32(seed) {
-          return function () {
-            seed |= 0
-            seed = (seed + 0x6d2b79f5) | 0
-            let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
-            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-            return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-          }
-        }
+      }
 
-        function randomIntFromSeed(seed, min, max) {
-          return (
-            Math.floor(mulberry32(seed)() * (max - min + 1)) + min
-          )
-        }
+      function randomIntFromSeed(seed, min, max) {
+        return Math.floor(mulberry32(seed)() * (max - min + 1)) + min
+      }
+      function resizeSvg() {
+        const svg = a.qs("#arrowsLayer")
+        svg.style.height =
+          document.documentElement.scrollHeight + "px"
+      }
+
+      ;(async () => {
+        await a.waituntil(() => window.globalrequest)
+
+        localStorage.lastSelfShownState ??= "true"
+        getCurrentUser().then((e) => {
+          uname = e.displayName
+          email = e.emailAddress
+          getSubtasks()
+        })
       })()
+      window.addEventListener("load", resizeSvg)
+      window.addEventListener("resize", resizeSvg)
+      window.addEventListener("scroll", resizeSvg)
     </script>
   </body>
 </html>
