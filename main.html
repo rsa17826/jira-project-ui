@@ -213,7 +213,7 @@
       const a = loadlib("allfuncs")
       var uname = null
       var tasks = {}
-      localStorage.lastSelfShownState ??= false
+      localStorage.lastSelfShownState ??= "true"
       toggleShowOnlySelf(a.qs("#toggleSelf"))
 
       function toggleShowOnlySelf(self) {
@@ -280,8 +280,7 @@
         // .filter(
         //   (e) =>
         //     e.status !== "In Review" &&
-        //     e.status !== "Done" &&
-        //     e.assignee !== "Jonathon Surratt",
+        //     e.status !== "Done"
         // )
         // for (var st of subtasks) {
         //   assigneeDict[st.assignee] = {
@@ -301,9 +300,7 @@
             ] ?? v.assigneeUrl
           tasks[v.key] = v
         }
-        a.qs("#output").innerHTML = subtasks
-          .map(showTask)
-          .join("")
+        a.qs("#output").innerHTML = subtasks.map(showTask).join("")
         if (localStorage.lastSelfShownState === "true")
           toggleShowOnlySelf(a.qs("#toggleSelf"))
       }
