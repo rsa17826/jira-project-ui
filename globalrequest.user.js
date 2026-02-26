@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         globalrequest
-// @version      1
+// @version      2
 // @description  none
 // @run-at       document-start
 // @author       rssaromeo
@@ -12,8 +12,17 @@
 // ==/UserScript==
 function c() {
   if (!unsafeWindow.globalrequest) {
-    unsafeWindow.globalrequest = async function globalrequest(data) {
-      if (typeof data == "string") data = { url: data }
+    unsafeWindow.globalrequest = async function globalrequest(
+      data,
+      otherData,
+    ) {
+      if (typeof data == "string") {
+        if (otherData !== undefined) {
+          data = { ...otherData, url: data }
+        } else {
+          data = { url: data }
+        }
+      }
       var temp
       data.onload = (e) => (temp = e)
       GM_xmlhttpRequest(data)
