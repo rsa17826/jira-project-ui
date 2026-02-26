@@ -48,6 +48,7 @@
     </svg>
     <script>
       const a = loadlib("allfuncs")
+      let rootBlockers = new Set()
       var uname = null
       var email = null
       var tasks = {}
@@ -141,6 +142,7 @@
             ] ?? v.assigneeUrl
           tasks[v.key] = v
         }
+        rootBlockers = getRootBlockersOfMine()
         a.qs("#output").innerHTML = subtasks.map(showTask).join("")
         if (localStorage.lastSelfShownState === "true")
           toggleShowOnlySelf(a.qs("#toggleSelf"))
@@ -216,14 +218,45 @@
         )
         drawAllDependencies()
       }
+      function getRootBlockersOfMine() {
+        const roots = new Set()
 
+        function findRoots(taskKey, visited = new Set()) {
+          if (visited.has(taskKey)) return
+          visited.add(taskKey)
+
+          const task = tasks[taskKey]
+          if (
+            !task ||
+            !task.blockedBy ||
+            task.blockedBy.length === 0
+          ) {
+            roots.add(taskKey)
+            return
+          }
+
+          task.blockedBy.forEach((parentKey) => {
+            findRoots(parentKey, visited)
+          })
+        }
+
+        // For each of your tasks
+        Object.values(tasks).forEach((task) => {
+          if (task.assignee === uname) {
+            findRoots(task.key)
+          }
+        })
+
+        return roots
+      }
       function showTask(task) {
         const jiraUrl = `https://${domain}/browse/${task.key}`
+        const isRootBlocker = rootBlockers.has(task.key)
         const isBlocked = task.blockedBy.length > 0
         const isMine = task.assignee === uname
-        const isBlockingMine = isBlockingMyTask(task.key)
+        // const isBlockingMine = isBlockingMyTask(task.key)
         const glowClass =
-          isBlockingMine ? "blocking-mine"
+          isRootBlocker ? "blocking-mine"
           : isMine ? "mine"
           : ""
         let statusClass = "todo"
