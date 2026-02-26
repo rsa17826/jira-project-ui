@@ -389,6 +389,7 @@
                   getAttachmentImage(att.url).then((url) => {
                     img.parentElement.href = url // the resolved blob URL
                     img.src = url // the resolved blob URL
+                    drawAllDependencies()
                   })
                   return a.newelem(
                     "a",
@@ -554,7 +555,9 @@
         svg.appendChild(path)
       }
       function drawAllDependencies() {
-        const svg = document.getElementById("arrowsLayer")
+        const svg = a.qs("#arrowsLayer")
+        svg.style.height =
+          document.documentElement.scrollHeight + "px"
         svg.innerHTML = svg.querySelector("defs").outerHTML // reset but keep arrowhead
 
         document.querySelectorAll(".task").forEach((taskDiv) => {
@@ -591,11 +594,6 @@
       function randomIntFromSeed(seed, min, max) {
         return Math.floor(mulberry32(seed)() * (max - min + 1)) + min
       }
-      function resizeSvg() {
-        const svg = a.qs("#arrowsLayer")
-        svg.style.height =
-          document.documentElement.scrollHeight + "px"
-      }
 
       ;(async () => {
         await a.waituntil(() => window.globalrequest)
@@ -607,8 +605,6 @@
           getSubtasks()
         })
       })()
-      window.addEventListener("load", resizeSvg)
-      window.addEventListener("resize", resizeSvg)
     </script>
   </body>
 </html>
