@@ -79,7 +79,7 @@
         `
 
         const res = await globalrequest({
-          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,parent,issuetype,priority,issuelinks`,
+          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,parent,issuetype,priority,issuelinks,attachment`,
           method: "GET",
           headers: {
             Authorization: "Basic " + btoa(email + ":" + apiToken),
@@ -94,6 +94,18 @@
           .map((issue) => {
             const { blocks, blockedBy } = extractBlockInfo(issue)
             log(issue)
+            const attachments = (issue.fields.attachment || []).map(
+              (att) => ({
+                id: att.id,
+                filename: att.filename,
+                mimeType: att.mimeType,
+                size: att.size,
+                url: att.content, // direct link to file
+                author: att.author?.displayName,
+                created: att.created,
+              }),
+            )
+
             return {
               key: issue.key,
               summary: issue.fields.summary,
@@ -112,6 +124,7 @@
               priority: issue.fields.priority?.name,
               blocks,
               blockedBy,
+              attachments, // ← add this
             }
           })
           .sort(
@@ -252,6 +265,16 @@
 
         return roots
       }
+      async function getAttachmentImage(url) {
+        const res = await globalrequest(url, {
+          responseType: "blob",
+          headers: {
+            Authorization: "Basic " + btoa(email + ":" + apiToken),
+          },
+        })
+        return URL.createObjectURL(res.response) // local URL to use in <img>
+      }
+
       function showTask(task) {
         const jiraUrl = `https://${domain}/browse/${task.key}`
         const isRootBlocker = rootBlockers.has(task.key)
@@ -307,6 +330,7 @@
                         key,
                         a.newelem("img", {
                           src: avatar,
+                          class: "avatar",
                           width: 20,
                           height: 20,
                           alt: name,
@@ -351,6 +375,29 @@
               " ",
               task.parent,
             ]),
+            task.attachments.length ?
+              a.newelem("div", { class: "attachments" }, [
+                task.attachments.map((att) => {
+                  var img = a.newelem(
+                    "img",
+                    {
+                      width: "100px",
+                      maxHeight: "300px",
+                    },
+                    [],
+                  )
+                  getAttachmentImage(att.url).then((url) => {
+                    img.parentElement.href = url // the resolved blob URL
+                    img.src = url // the resolved blob URL
+                  })
+                  return a.newelem(
+                    "a",
+                    { href: att.url, target: "_blank" },
+                    [a.newelem("li", {}, [img])],
+                  )
+                }),
+              ])
+            : null,
           ].filter(Boolean),
         )
       }

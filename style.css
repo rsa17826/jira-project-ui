@@ -157,7 +157,7 @@ button {
 }
 
 /* Avatars inline */
-.task img {
+.task img.avatar {
   vertical-align: middle;
   margin-left: 6px;
   border-radius: 50%;
