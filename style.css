@@ -9,16 +9,20 @@
 }
 /* Blue glow = your task */
 .task.mine {
-  box-shadow:
-    0 0 12px #4da3ff,
-    0 0 4px #4da3ff inset;
+  position: relative;
+  background-clip: padding-box; /* prevents bg bleeding under border */
+  box-shadow: 0 0 12px #4da3ff; /* glow all around */
+  outline: 6px solid transparent; /* outline same width as border */
+  outline-offset: -6px; /* pulls outline inside border edges */
 }
 
 /* Red glow = blocking one of your tasks */
 .task.blocking-mine {
-  box-shadow:
-    0 0 12px #ff4d4d,
-    0 0 4px #ff4d4d inset;
+  position: relative;
+  background-clip: padding-box; /* prevents bg bleeding under border */
+  box-shadow: 0 0 12px #ff4d4d; /* glow all around */
+  outline: 6px solid transparent; /* outline same width as border */
+  outline-offset: -6px; /* pulls outline inside border edges */
 }
 .jira-link {
   text-decoration: none;
