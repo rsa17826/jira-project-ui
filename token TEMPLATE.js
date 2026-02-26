@@ -2,6 +2,8 @@
 const apiToken = ""
 const domain = "*.atlassian.net"
 const currentProject = "T1"
+// required only if not logged into jira it appears
+var email = "*@*.*"
 // initials as keys
 const imageReplaces = {
   AA: "./images/sm.png",

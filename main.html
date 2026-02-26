@@ -387,8 +387,8 @@
                     [],
                   )
                   getAttachmentImage(att.url).then((url) => {
-                    img.parentElement.href = url // the resolved blob URL
-                    img.src = url // the resolved blob URL
+                    img.parentElement.href = url
+                    img.src = url
                     drawAllDependencies()
                   })
                   return a.newelem(
