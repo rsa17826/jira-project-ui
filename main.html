@@ -377,7 +377,7 @@
             ]),
             task.attachments.length ?
               a.newelem("div", { class: "attachments" }, [
-                task.attachments.map((att) => {
+                task.attachments.map((att, idx) => {
                   var img = a.newelem(
                     "img",
                     {
@@ -393,7 +393,11 @@
                   })
                   return a.newelem(
                     "a",
-                    { href: att.url, target: "_blank" },
+                    {
+                      href: att.url,
+                      target: "_blank",
+                      download: task.key + " #" + (idx + 1),
+                    },
                     [img],
                   )
                 }),
