@@ -709,7 +709,6 @@
           Array.isArray(data.class) ?
             data.class
           : String(data.class).split(/\s+/)
-
         classes.filter(Boolean).forEach((c) => elem.classList.add(c))
         delete data.class
       }
@@ -759,10 +758,8 @@
       ------------------------- */
       if (inside.length) {
         const frag = document.createDocumentFragment()
-
         inside.flat().forEach((child) => {
           if (child == null) return
-
           if (
             typeof child === "string" ||
             typeof child === "number"
@@ -772,10 +769,8 @@
             frag.appendChild(child)
           }
         })
-
         elem.appendChild(frag)
       }
-
       return elem
     },
     // function newelem(type, data = {}, inside = []) {
