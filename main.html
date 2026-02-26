@@ -79,7 +79,7 @@
         `
 
         const res = await globalrequest({
-          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,parent,issuetype,priority,issuelinks,attachment`,
+          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment`,
           method: "GET",
           headers: {
             Authorization: "Basic " + btoa(email + ":" + apiToken),
@@ -120,7 +120,7 @@
                   /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
                 )?.[1],
               ),
-              parent: issue.fields.parent?.key,
+              // parent: issue.fields.parent?.key,
               priority: issue.fields.priority?.name,
               blocks,
               blockedBy,
@@ -389,11 +389,11 @@
                   },
                 }),
             ]),
-            a.newelem("div", {}, [
-              a.newelem("strong", {}, ["Parent:"]),
-              " ",
-              task.parent,
-            ]),
+            // a.newelem("div", {}, [
+            //   a.newelem("strong", {}, ["Parent:"]),
+            //   " ",
+            //   task.parent,
+            // ]),
             task.attachments.length ?
               a.newelem("div", { class: "attachments" }, [
                 task.attachments.map((att, idx) => {
