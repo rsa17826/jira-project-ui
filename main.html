@@ -452,7 +452,7 @@ ${task.summary}
       ;(async () => {
         await a.waituntil(() => window.globalrequest)
 
-        localStorage.lastSelfShownState ??= "true"
+        localStorage.lastSelfShownState ??= "false"
         getCurrentUser().then((e) => {
           uname = e.displayName
           email = e.emailAddress
