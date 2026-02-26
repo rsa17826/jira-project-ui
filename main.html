@@ -143,7 +143,10 @@
           tasks[v.key] = v
         }
         rootBlockers = getRootBlockersOfMine()
-        a.qs("#output").innerHTML = subtasks.map(showTask).join("")
+        a.qs("#output").innerHTML = ""
+        subtasks.forEach((e) =>
+          a.qs("#output").appendChild(showTask(e)),
+        )
         if (localStorage.lastSelfShownState === "true")
           toggleShowOnlySelf(a.qs("#toggleSelf"))
         drawAllDependencies()
@@ -264,27 +267,92 @@
           statusClass = "progress"
         else if (task.statusCategory === "Done") statusClass = "done"
 
-        return `<div class="task ${statusClass} ${isBlocked ? "blocker" : ""} ${glowClass}" data-task-key="${task.key}"><a 
-class="jira-link" 
-href="${jiraUrl}" 
-target="_blank" 
->${task.key}</a>${
-          isBlocked ?
-            `
-🚨 Blocked by: ${task.blockedBy
-              .map((key) => {
-                const blocker = tasks[key] // lookup in your dict
-                const name = blocker?.assignee || "Unknown"
-                const avatar = blocker?.assigneeUrl || "about:blank"
-                return `<a href="https://${domain}/browse/${key}" target="_blank" class="blocker-link">${key}<img src="${avatar}" width="20" height="20" style="vertical-align: middle; border-radius:50%; margin-left:4px;" alt="${name}" title="${name}" /></a>`
-              })
-              .join(", ")}`
-          : ""
-        }
-${task.summary}
-<strong>Status:</strong> ${task.status}
-<strong>Assignee:</strong> ${task.assignee || "Unassigned"} <img style='vertical-align: middle; margin-left: -2px; border-radius: 50%;' width=18px height=18px src="${task.assigneeUrl}"></img>
-<strong>Parent:</strong> ${task.parent}</div>`
+        return a.newelem(
+          "div",
+          {
+            class: [
+              "task",
+              statusClass,
+              isBlocked && "blocker",
+              glowClass,
+            ].filter(Boolean),
+            dataset: { taskKey: task.key },
+          },
+          [
+            a.newelem(
+              "a",
+              {
+                class: "jira-link",
+                href: jiraUrl,
+                target: "_blank",
+              },
+              [task.key],
+            ),
+            isBlocked &&
+              a.newelem("div", { class: "blocked-section" }, [
+                "🚨 Blocked by: ",
+                ...task.blockedBy.flatMap((key, i) => {
+                  const blocker = tasks[key]
+                  const name = blocker?.assignee || "Unknown"
+                  const avatar = blocker?.assigneeUrl || "about:blank"
+                  return [
+                    a.newelem(
+                      "a",
+                      {
+                        href: `https://${domain}/browse/${key}`,
+                        target: "_blank",
+                        class: "blocker-link",
+                      },
+                      [
+                        key,
+                        a.newelem("img", {
+                          src: avatar,
+                          width: 20,
+                          height: 20,
+                          alt: name,
+                          title: name,
+                          style: {
+                            verticalAlign: "middle",
+                            borderRadius: "50%",
+                            marginLeft: "4px",
+                          },
+                        }),
+                      ],
+                    ),
+                    i < task.blockedBy.length - 1 ? ", " : null,
+                  ]
+                }),
+              ]),
+            a.newelem("div", { class: "summary" }, [task.summary]),
+            a.newelem("div", {}, [
+              a.newelem("strong", {}, ["Status:"]),
+              " ",
+              task.status,
+            ]),
+            a.newelem("div", {}, [
+              a.newelem("strong", {}, ["Assignee:"]),
+              " ",
+              task.assignee || "Unassigned",
+              " ",
+              task.assigneeUrl &&
+                a.newelem("img", {
+                  src: task.assigneeUrl,
+                  width: 18,
+                  height: 18,
+                  style: {
+                    verticalAlign: "middle",
+                    marginLeft: "-2px",
+                    borderRadius: "50%",
+                  },
+                }),
+            ]),
+            a.newelem("div", {}, [
+              a.newelem("strong", {}, ["Parent:"]),
+              " ",
+              task.parent,
+            ]),
+          ].filter(Boolean),
+        )
       }
       async function getAllProjects() {
         const res = await globalrequest({
