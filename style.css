@@ -163,38 +163,3 @@ button {
   border-radius: 50%;
   border: 1px solid #555;
 }
-
-/* Tooltip for issue previews */
-.tooltip {
-  position: absolute;
-  background: #333;
-  color: #e0e0e0;
-  border: 1px solid #555;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 14px;
-  max-width: 300px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease-in-out;
-  z-index: 1000;
-}
-.tooltip.visible {
-  opacity: 1;
-}
-.tooltip .spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 3px solid #555;
-  border-top-color: #74b9ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  vertical-align: middle;
-  margin-left: 6px;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
