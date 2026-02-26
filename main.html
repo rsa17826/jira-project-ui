@@ -408,7 +408,7 @@
                   getAttachmentImage(att.url).then((url) => {
                     img.parentElement.href = url
                     img.src = url
-                    drawAllDependencies()
+                    img.onload = drawAllDependencies
                   })
                   return a.newelem(
                     "a",
