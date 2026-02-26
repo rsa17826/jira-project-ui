@@ -7,7 +7,19 @@
   font-family: Arial, sans-serif;
   /* line-height: 0.7; */
 }
+/* Blue glow = your task */
+.task.mine {
+  box-shadow:
+    0 0 12px #4da3ff,
+    0 0 4px #4da3ff inset;
+}
 
+/* Red glow = blocking one of your tasks */
+.task.blocking-mine {
+  box-shadow:
+    0 0 12px #ff4d4d,
+    0 0 4px #ff4d4d inset;
+}
 .jira-link {
   text-decoration: none;
   font-weight: bold;

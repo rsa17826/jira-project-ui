@@ -61,6 +61,14 @@
             "show all tasks"
           : "show only own tasks"
       }
+      function isBlockingMyTask(taskKey) {
+        return Object.values(tasks).some(
+          (t) =>
+            t.assignee === uname &&
+            t.blockedBy &&
+            t.blockedBy.includes(taskKey),
+        )
+      }
       // var assigneeDict = {}
       async function getSubtasks() {
         const jql = `
@@ -212,13 +220,18 @@
       function showTask(task) {
         const jiraUrl = `https://${domain}/browse/${task.key}`
         const isBlocked = task.blockedBy.length > 0
-
+        const isMine = task.assignee === uname
+        const isBlockingMine = isBlockingMyTask(task.key)
+        const glowClass =
+          isBlockingMine ? "blocking-mine"
+          : isMine ? "mine"
+          : ""
         let statusClass = "todo"
         if (task.statusCategory === "In Progress")
           statusClass = "progress"
         else if (task.statusCategory === "Done") statusClass = "done"
 
-        return `<div class="task ${statusClass}${isBlocked ? " blocker" : ""}" data-task-key="${task.key}"><a 
+        return `<div class="task ${statusClass} ${isBlocked ? "blocker" : ""} ${glowClass}" data-task-key="${task.key}"><a 
 class="jira-link" 
 href="${jiraUrl}" 
 target="_blank" 
