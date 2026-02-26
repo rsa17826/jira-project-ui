@@ -162,4 +162,5 @@ button {
   margin-left: 6px;
   border-radius: 50%;
   border: 1px solid #555;
+  translate: 0 -1.5px;
 }
