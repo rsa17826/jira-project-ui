@@ -184,6 +184,7 @@
             }
           }
           cache.taskCache = subtasks
+          renderTasks()
         } else {
           log("no new data")
         }
@@ -198,26 +199,6 @@
         //     assigneeUrl: st.assigneeUrl,
         //   }
         // }
-        for (var v of subtasks) {
-          v.assigneeUrl =
-            imageReplaces[
-              v.assigneeUrl
-                .replace(
-                  "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/",
-                  "",
-                )
-                .replace(/-\d+\.png$/, "")
-            ] ?? v.assigneeUrl
-          tasks[v.key] = v
-        }
-        rootBlockers = getRootBlockersOfMine()
-        a.qs("#output").innerHTML = ""
-        subtasks.forEach((e) =>
-          a.qs("#output").appendChild(showTask(e)),
-        )
-        if (localStorage.lastSelfShownState === "true")
-          toggleShowOnlySelf(a.qs("#toggleSelf"))
-        drawAllDependencies()
       }
       //     function showTask({ key, assignee, status, summary, parent }) {
       //       return `
@@ -321,7 +302,12 @@
         return roots
       }
       async function getAttachmentImage(url) {
+        // time(url)
+        // log(cache.imageCache[url], !!cache.imageCache[url], url, {
+        //   ...cache.imageCache,
+        // })
         if (cache.imageCache[url]) {
+          // timeEnd(url)
           return URL.createObjectURL(cache.imageCache[url])
         }
         const res = await globalrequest(url, {
@@ -330,6 +316,7 @@
             Authorization: "Basic " + btoa(email + ":" + apiToken),
           },
         })
+        // timeEnd(url)
         return URL.createObjectURL(
           (cache.imageCache[url] = res.response),
         ) // local URL to use in <img>
