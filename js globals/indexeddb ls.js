@@ -270,6 +270,7 @@
         return proto === Object.prototype // only plain objects
       }
       function reactive(obj, basePath = []) {
+        if (!Array.isArray(basePath)) basePath = [basePath]
         if (!isPlainObject(obj)) return obj // <-- don't proxy Blobs, FileHandles, etc.
         if (proxyCache.has(obj)) return proxyCache.get(obj)
 
