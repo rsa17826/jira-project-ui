@@ -8,6 +8,9 @@
   /* line-height: 0.7; */
 }
 /* Blue glow = your task */
+.task.mine:not(.blocked) {
+  box-shadow: 0 0 12px #94ff4d; /* glow all around */
+}
 .task.mine {
   position: relative;
   background-clip: padding-box; /* prevents bg bleeding under border */
@@ -24,17 +27,13 @@
   outline: 6px solid transparent; /* outline same width as border */
   outline-offset: -6px; /* pulls outline inside border edges */
 }
-.jira-link {
+.jira-link,
+.blocker-link {
   text-decoration: none;
   font-weight: bold;
   color: #0747a6;
   display: inline-block;
   margin-bottom: 2px;
-}
-
-.blocked {
-  color: #de350b;
-  font-weight: bold;
 }
 
 /* Reduce spacing for the detail lines */
@@ -52,15 +51,15 @@
   border-color: #36b37e;
 }
 
-.blocker {
+.blocked {
   border-color: #de350b !important;
   background: #ffebe6;
 }
 
-.blocked {
+/* .blocked-section {
   color: #de350b;
   font-weight: bold;
-}
+} */
 
 .blocking {
   color: #bf2600;
@@ -125,7 +124,7 @@ button {
 .task.done {
   --c: #28a745;
 } /* green / Done */
-.task.blocker {
+.task.blocked {
   --c: #de350b;
 }
 
@@ -134,23 +133,25 @@ button {
   background-color: color-mix(in srgb, var(--c) 20%, #1e1e1e 80%);
 }
 
-/* .task.blocker {
+/* .task.blocked {
   box-shadow: 0 0 12px #a00;
 } */
 
 /* Jira links */
 .jira-link,
+.blocker-link,
 .blocked a {
   color: #74b9ff;
   text-decoration: none;
 }
 .jira-link:hover,
+.blocker-link:hover,
 .blocked a:hover {
   text-decoration: underline;
 }
 
 /* Blocked section */
-.blocked {
+.blocked-section {
   color: #ff6b6b;
   font-weight: bold;
   margin: 4px 0;
