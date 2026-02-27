@@ -18,6 +18,7 @@
     <pre id="output"></pre>
     <script src="./js globals/libloader.js"></script>
     <script src="./js globals/allfuncs.js"></script>
+    <script src="./js globals/indexeddb ls.js"></script>
     <script src="./js globals/log.js"></script>
     <script src="./token.js"></script>
     <svg
@@ -77,7 +78,8 @@
           AND issuetype IN subTaskIssueTypes()
           ORDER BY created DESC
         `
-
+        globalThis.imageCache =
+          await loadlib("indexeddb ls")("imageCache")
         const res = await globalrequest({
           url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment`,
           method: "GET",
@@ -284,13 +286,16 @@
         return roots
       }
       async function getAttachmentImage(url) {
+        if (imageCache[url]) {
+          return URL.createObjectURL(imageCache[url])
+        }
         const res = await globalrequest(url, {
           responseType: "blob",
           headers: {
             Authorization: "Basic " + btoa(email + ":" + apiToken),
           },
         })
-        return URL.createObjectURL(res.response) // local URL to use in <img>
+        return URL.createObjectURL((imageCache[url] = res.response)) // local URL to use in <img>
       }
 
       function showTask(task) {
