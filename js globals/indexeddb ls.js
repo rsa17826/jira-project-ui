@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         lib:indexeddb ls
-// @version      13
+// @version      14
 // @description  none
 // @license      GPLv3
 // @run-at       document-start
@@ -199,9 +199,19 @@
     ========================== */
 
       const writeQueue = new Map()
-      let flushTimer = null
+      let flushScheduled = false
+      let flushing = false
       let pendingResolves = []
-      const BATCH_DELAY = 10
+
+      function scheduleFlush() {
+        if (flushScheduled) return
+        flushScheduled = true
+
+        queueMicrotask(async () => {
+          flushScheduled = false
+          await flush()
+        })
+      }
 
       function queueWrite(key, value) {
         if (!isLeader) {
@@ -210,47 +220,49 @@
         }
 
         writeQueue.set(key, { id: key, val: value })
-
-        if (!flushTimer) {
-          flushTimer = setTimeout(flush, BATCH_DELAY)
-        }
+        scheduleFlush()
       }
 
       async function flush() {
-        if (!isLeader || !writeQueue.size) {
+        if (flushing || !isLeader || !writeQueue.size) {
           resolvePending()
           return
         }
 
+        flushing = true
+
         const items = [...writeQueue.values()]
         writeQueue.clear()
 
-        clearTimeout(flushTimer)
-        flushTimer = null
+        try {
+          await new Promise((resolve, reject) => {
+            const tx = dbObj.db.transaction(
+              dbObj.storeName,
+              "readwrite",
+            )
+            const store = tx.objectStore(dbObj.storeName)
 
-        await new Promise((resolve, reject) => {
-          const tx = dbObj.db.transaction(
-            dbObj.storeName,
-            "readwrite",
-          )
-          const store = tx.objectStore(dbObj.storeName)
-
-          for (const item of items) {
-            if (item.val === undefined) {
-              store.delete(item.id)
-            } else {
-              store.put(item)
+            for (const item of items) {
+              if (item.val === undefined) {
+                store.delete(item.id)
+              } else {
+                store.put(item)
+              }
             }
-          }
 
-          tx.oncomplete = resolve
-          tx.onerror = () => reject(tx.error)
-        })
+            tx.oncomplete = resolve
+            tx.onerror = () => reject(tx.error)
+          })
 
-        channel.postMessage({ type: "external-update", items })
+          channel.postMessage({ type: "external-update", items })
+          emit("flush", items)
+        } finally {
+          flushing = false
+          resolvePending()
 
-        emit("flush", items)
-        resolvePending()
+          // If new writes came during flush, schedule again
+          if (writeQueue.size) scheduleFlush()
+        }
       }
 
       function resolvePending() {
@@ -260,8 +272,11 @@
 
       function doneSaving() {
         return new Promise((resolve) => {
-          if (!writeQueue.size && !flushTimer) resolve()
-          else pendingResolves.push(resolve)
+          if (!writeQueue.size && !flushing && !flushScheduled) {
+            resolve()
+          } else {
+            pendingResolves.push(resolve)
+          }
         })
       }
 
