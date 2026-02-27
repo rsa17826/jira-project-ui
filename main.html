@@ -308,7 +308,9 @@
         // })
         if (cache.imageCache[url]) {
           // timeEnd(url)
-          return URL.createObjectURL(cache.imageCache[url])
+          try {
+            return URL.createObjectURL(cache.imageCache[url])
+          } catch (e) {}
         }
         const res = await globalrequest(url, {
           responseType: "blob",
