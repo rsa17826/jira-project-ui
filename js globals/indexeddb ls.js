@@ -8,31 +8,30 @@
 // @match        *://*/*
 // @include      *
 // @tag          lib
-// @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAMAAABiM0N1AAAAAXNSR0IB2cksfwAAAAlwSFlzAAAOxAAADsQBlSsOGwAAAHJQTFRFAAAAEIijAo2yAI60BYyuF4WaFIifAY6zBI2wB4usGIaZEYigIoiZCIyrE4igG4iYD4mjEomhFoedCoqpDIqnDomlBYyvE4efEYmiDYqlA42xBoytD4mkCYqqGYSUFYidC4qoC4upAo6yCoupDYqmCYur4zowOQAAACZ0Uk5TAO////9vr////1+/D/+/L+/Pf/////+f3///////H4////////+5G91rAAACgUlEQVR4nM2Y22KjIBCGidg1264liZqDadK03X3/V2wNKHMC7MpF/xthHD5mgERAqZhWhfYqH6K+Qf2qNNf625hCoFj9/gblMUi5q5jLkXLCKudgyiRm0FMK82cWJp1fLbV5VmvJbCIc0GCYaFqqlDJgADdBjncqAXYobm1xh72aFMflbysteFfdy2Yi1XGOm5HGBzQ1dq7TzEoxjeNTjQZb7VA3e1c7+ImgasAgQ9+xusNVNZIo5xmOMgihIS2PbCQIiHEUdTvhxCcS/kPomfFI2zHy2PkWmA6aNatIJpKFJyekyy02xh5Y3DI9T4aOT6VhIUrsNTFp1pf79Z4SIIVDegl6IJO6cHiL/GimIZDhgTu/BlYWCQzHMl0zBWT/T3KAhtxOuUB9FtBrpsz0RV4xsjHmW+UCaffcSy/5viMGer0/6HdFNMZBq/vjJL38H9Dqx4Fuy0Em12DbZy+9pGtiDijbglwAehyj11n0tRD3WUBm+lwulE/8h4BuA+iWAQQnteg2Xm63WQLTpnMnpjdge0Mgu/GRPsV4xdjQ94Lfi624fabhDkfUqIKNrM64Q837v8yL0prasepCgrtvw1sJpoqanGEX7b5mQboNW8eawXaWXTMfMGxub472hzWzHSn6Sg2G9+6TAyRruE71s+zAzjWaknoyJCQzwxrghH2k5FDT4eqWunuNxyN9QCGcxVod5oADbYnIUkDTGZEf1xDJnSFteQ3KdsT8zYDMQXcHxsevcLH1TrsABzkNPyA/L7b0jg704viMMlpQI96WsHknCt/3YH0kOEo9zcGkwrFK39ck72rmoehmKqo2RKlilzSy/nJKEV45CT38myJp456fezktHjN5aeMAAAAASUVORK5CYII=
 // @grant        none
-// @exclude      /livereload.net\/files\/ffopen\/index.html$/
-// @namespace https://greasyfork.org/users/1184528
-// @downloadURL https://update.greasyfork.org/scripts/491566/lib%3Aindexeddb%20ls.user.js
-// @updateURL https://update.greasyfork.org/scripts/491566/lib%3Aindexeddb%20ls.meta.js
 // ==/UserScript==
 
 ;(() => {
-  var x = loadlib("libloader")
+  const lib = loadlib("libloader")
 
-  const indexeddb_funcs = (() => {
+  /* =========================================================
+     INDEXEDDB HELPERS
+  ========================================================== */
+
+  const idb = (() => {
     function openDB({ dbName, storeName, keyPath = "id" }) {
       return new Promise((resolve, reject) => {
-        const req = indexedDB.open(dbName, 1)
+        const request = indexedDB.open(dbName, 1)
 
-        req.onupgradeneeded = (e) => {
+        request.onupgradeneeded = (e) => {
           const db = e.target.result
           if (!db.objectStoreNames.contains(storeName)) {
             db.createObjectStore(storeName, { keyPath })
           }
         }
 
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => reject(req.error)
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
       })
     }
 
@@ -43,67 +42,88 @@
     }) {
       const dbName =
         storePrefix ? `${storePrefix}_${storeName}` : storeName
+
       const db = await openDB({ dbName, storeName, keyPath })
       return { db, storeName }
     }
 
-    function tx(dbObj, mode) {
-      return dbObj.db
-        .transaction(dbObj.storeName, mode)
-        .objectStore(dbObj.storeName)
+    function getStore(dbObj, mode = "readonly") {
+      const tx = dbObj.db.transaction(dbObj.storeName, mode)
+      return tx.objectStore(dbObj.storeName)
     }
 
-    function getall(dbObj) {
-      return new Promise((res, rej) => {
-        const r = tx(dbObj, "readonly").getAll()
-        r.onsuccess = () => res(r.result || [])
-        r.onerror = () => rej(r.error)
+    function getAll(dbObj) {
+      return new Promise((resolve, reject) => {
+        const request = getStore(dbObj).getAll()
+        request.onsuccess = () => resolve(request.result || [])
+        request.onerror = () => reject(request.error)
       })
     }
 
-    return { setup, getall }
+    function clearAll(dbObj) {
+      return new Promise((resolve, reject) => {
+        const request = getStore(dbObj, "readwrite").clear()
+        request.onsuccess = () => resolve(true)
+        request.onerror = () => reject(request.error)
+      })
+    }
+
+    return { setup, getAll, clearAll }
   })()
 
-  x.savelib(
+  /* =========================================================
+     MAIN LIB
+  ========================================================== */
+
+  lib.savelib(
     "indexeddb ls",
-    async function newdbproxy(name, obj = {}) {
-      /* =========================
-     BASIC SETUP
-  ========================== */
-      const db = await indexeddb_funcs.setup({
+    async function createDB(name, options = {}) {
+      const dbObj = await idb.setup({
         storeName: name,
         keyPath: "id",
         storePrefix: "",
-        ...obj,
+        ...options,
       })
 
-      const initial = await indexeddb_funcs.getall(db)
+      /* =========================
+       LOAD INITIAL DATA
+    ========================== */
+
+      const records = await idb.getAll(dbObj)
       let localData = {}
-      initial.forEach((i) => (localData[i.id] = i.val))
+
+      for (const { id, val } of records) {
+        localData[id] = val
+      }
 
       /* =========================
-     EVENTS
-  ========================== */
+       EVENT SYSTEM
+    ========================== */
+
       const listeners = new Map()
+
       function on(event, cb) {
         if (!listeners.has(event)) listeners.set(event, new Set())
         listeners.get(event).add(cb)
         return [event, cb]
       }
+
       function off([event, cb]) {
         listeners.get(event)?.delete(cb)
       }
+
       function emit(event, payload) {
         listeners.get(event)?.forEach((cb) => cb(payload))
       }
 
       /* =========================
-     LEADER ELECTION WITH HEARTBEAT
-  ========================== */
+       TAB LEADER SYSTEM
+    ========================== */
+
       const TAB_ID = crypto.randomUUID()
       const channel = new BroadcastChannel("indexeddb_ls_" + name)
 
-      const tabs = new Map([[TAB_ID, Date.now()]]) // track last seen timestamps
+      const tabs = new Map([[TAB_ID, Date.now()]])
       let leaderId = TAB_ID
       let isLeader = true
 
@@ -111,25 +131,33 @@
       const LEADER_TIMEOUT = 3000
 
       function electLeader() {
-        const aliveTabs = [...tabs.entries()].filter(
-          ([id, lastSeen]) => Date.now() - lastSeen < LEADER_TIMEOUT,
-        )
-        if (!aliveTabs.length) return
-        const newLeaderId = aliveTabs.map(([id]) => id).sort()[0]
-        if (leaderId !== newLeaderId) {
-          leaderId = newLeaderId
-          const oldLeader = isLeader
-          isLeader = leaderId === TAB_ID
-          if (!isLeader && oldLeader)
-            emit("leader-stepped-down", {
-              oldLeaderId: TAB_ID,
-              newLeaderId: leaderId,
-            })
-          if (isLeader) emit("leader-elected", { leaderId })
+        const alive = [...tabs.entries()]
+          .filter(([, t]) => Date.now() - t < LEADER_TIMEOUT)
+          .map(([id]) => id)
+          .sort()
+
+        if (!alive.length) return
+
+        const newLeader = alive[0]
+        if (newLeader === leaderId) return
+
+        const wasLeader = isLeader
+        leaderId = newLeader
+        isLeader = leaderId === TAB_ID
+
+        if (!isLeader && wasLeader) {
+          emit("leader-stepped-down", {
+            oldLeaderId: TAB_ID,
+            newLeaderId: leaderId,
+          })
+        }
+
+        if (isLeader) {
+          emit("leader-elected", { leaderId })
         }
       }
 
-      function sendHeartbeat() {
+      function heartbeat() {
         channel.postMessage({ type: "heartbeat", id: TAB_ID })
       }
 
@@ -139,20 +167,20 @@
 
         switch (msg.type) {
           case "hello":
+          case "heartbeat":
             tabs.set(msg.id, now)
             electLeader()
             break
+
           case "goodbye":
             tabs.delete(msg.id)
             electLeader()
             break
-          case "heartbeat":
-            tabs.set(msg.id, now)
-            electLeader() // leader may have died
-            break
+
           case "write-request":
             if (isLeader) queueWrite(msg.key, msg.value)
             break
+
           case "external-update":
             applyExternal(msg.items)
             break
@@ -160,17 +188,16 @@
       }
 
       channel.postMessage({ type: "hello", id: TAB_ID })
-      setInterval(sendHeartbeat, HEARTBEAT_INTERVAL)
+      setInterval(heartbeat, HEARTBEAT_INTERVAL)
 
       window.addEventListener("beforeunload", () => {
         channel.postMessage({ type: "goodbye", id: TAB_ID })
-        tabs.delete(TAB_ID)
-        electLeader()
       })
 
       /* =========================
-     BATCH ENGINE (Leader Only)
-  ========================== */
+       BATCH WRITE ENGINE
+    ========================== */
+
       const writeQueue = new Map()
       let flushTimer = null
       let pendingResolves = []
@@ -181,34 +208,52 @@
           channel.postMessage({ type: "write-request", key, value })
           return
         }
+
         writeQueue.set(key, { id: key, val: value })
-        if (!flushTimer) flushTimer = setTimeout(flush, BATCH_DELAY)
+
+        if (!flushTimer) {
+          flushTimer = setTimeout(flush, BATCH_DELAY)
+        }
       }
 
       async function flush() {
         if (!isLeader || !writeQueue.size) {
-          resolveDone()
+          resolvePending()
           return
         }
+
         const items = [...writeQueue.values()]
         writeQueue.clear()
+
         clearTimeout(flushTimer)
         flushTimer = null
 
-        await new Promise((res, rej) => {
-          const txObj = db.db.transaction(db.storeName, "readwrite")
-          const store = txObj.objectStore(db.storeName)
-          items.forEach((i) => store.put(i))
-          txObj.oncomplete = res
-          txObj.onerror = () => rej(txObj.error)
+        await new Promise((resolve, reject) => {
+          const tx = dbObj.db.transaction(
+            dbObj.storeName,
+            "readwrite",
+          )
+          const store = tx.objectStore(dbObj.storeName)
+
+          for (const item of items) {
+            if (item.val === undefined) {
+              store.delete(item.id)
+            } else {
+              store.put(item)
+            }
+          }
+
+          tx.oncomplete = resolve
+          tx.onerror = () => reject(tx.error)
         })
 
         channel.postMessage({ type: "external-update", items })
+
         emit("flush", items)
-        resolveDone()
+        resolvePending()
       }
 
-      function resolveDone() {
+      function resolvePending() {
         pendingResolves.forEach((r) => r())
         pendingResolves = []
       }
@@ -221,55 +266,54 @@
       }
 
       function applyExternal(items) {
-        items.forEach((i) => (localData[i.id] = i.val))
+        for (const { id, val } of items) {
+          if (val === undefined) delete localData[id]
+          else localData[id] = val
+        }
+
         emit("external-change", items)
         emit("change", { type: "external", items })
       }
 
       /* =========================
-     CORE SET / REMOVE
-  ========================== */
-      function setProp(prop, val) {
-        localData[prop] = val
-        queueWrite(prop, val)
-        emit("set", { key: prop, value: val })
-        emit("change", { type: "set", key: prop, value: val })
+       CORE OPERATIONS
+    ========================== */
+
+      function setProp(key, value) {
+        localData[key] = value
+        queueWrite(key, value)
+
+        emit("set", { key, value })
+        emit("change", { type: "set", key, value })
       }
 
-      function deleteProp(prop) {
-        const existed = prop in localData
-        delete localData[prop]
+      function deleteProp(key) {
+        if (!(key in localData)) return true
 
-        if (isLeader) {
-          const txObj = db.db.transaction(db.storeName, "readwrite")
-          txObj.objectStore(db.storeName).delete(prop)
-        } else {
-          channel.postMessage({
-            type: "write-request",
-            key: prop,
-            value: undefined,
-          })
-        }
+        delete localData[key]
+        queueWrite(key, undefined)
 
-        if (existed) {
-          emit("delete", { key: prop })
-          emit("change", { type: "delete", key: prop })
-        }
+        emit("delete", { key })
+        emit("change", { type: "delete", key })
+
+        return true
       }
 
       /* =========================
-     PROXY
-  ========================== */
+       PROXY
+    ========================== */
+
       const handler = {
         set(target, prop, value) {
           target[prop] = value
           setProp(prop, value)
           return true
         },
+
         deleteProperty(target, prop) {
-          deleteProp(prop)
-          return true
+          return deleteProp(prop)
         },
+
         get(target, prop) {
           switch (prop) {
             case "on":
@@ -280,18 +324,36 @@
               return doneSaving()
             case "all":
               return localData
+
+            case "clear":
+              return async () => {
+                await idb.clearAll(dbObj)
+
+                // ✅ Properly clear existing proxy target
+                for (const key of Object.keys(localData)) {
+                  delete localData[key]
+                }
+
+                emit("clear", {})
+                emit("change", { type: "clear" })
+
+                return localData
+              }
             case "saveall":
-              return async function () {
-                Object.entries(localData).forEach(([k, v]) =>
-                  queueWrite(k, v),
-                )
+              return async () => {
+                for (const [k, v] of Object.entries(localData)) {
+                  queueWrite(k, v)
+                }
                 await flush()
               }
+
             case Symbol.iterator:
               return function* () {
-                for (const [id, val] of Object.entries(localData))
+                for (const [id, val] of Object.entries(localData)) {
                   yield { id, val }
+                }
               }
+
             default:
               return Reflect.get(target, prop)
           }

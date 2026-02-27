@@ -78,8 +78,34 @@
           AND issuetype IN subTaskIssueTypes()
           ORDER BY created DESC
         `
-        globalThis.imageCache =
-          await loadlib("indexeddb ls")("imageCache")
+        globalThis.cache = await loadlib("indexeddb ls")("cache")
+        cache.imageCache ??= {}
+        var subtasks
+        function renderTasks() {
+          for (var v of subtasks) {
+            v.assigneeUrl =
+              imageReplaces[
+                v.assigneeUrl
+                  .replace(
+                    "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/",
+                    "",
+                  )
+                  .replace(/-\d+\.png$/, "")
+              ] ?? v.assigneeUrl
+            tasks[v.key] = v
+          }
+          rootBlockers = getRootBlockersOfMine()
+          a.qs("#output").innerHTML = ""
+          subtasks.forEach((e) =>
+            a.qs("#output").appendChild(showTask(e)),
+          )
+          if (localStorage.lastSelfShownState === "true")
+            toggleShowOnlySelf(a.qs("#toggleSelf"))
+          drawAllDependencies()
+        }
+        if ((subtasks = cache.taskCache)) {
+          renderTasks()
+        }
         const res = await globalrequest({
           url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment`,
           method: "GET",
@@ -88,69 +114,78 @@
             Accept: "application/json",
           },
         })
+        var newHash = hashStringToInt(res.text)
+        if (!cache.taskCacheHash || cache.taskCacheHash !== newHash) {
+          log("new data")
+          cache.taskCacheHash = newHash
+          const data = JSON.parse(res.text)
 
-        const data = JSON.parse(res.text)
+          subtasks = data.issues
+            .filter((issue) => issue.fields.issuetype.subtask)
+            .map((issue) => {
+              const { blocks, blockedBy } = extractBlockInfo(issue)
+              log(issue)
+              const attachments = (issue.fields.attachment || []).map(
+                (att) => ({
+                  id: att.id,
+                  filename: att.filename,
+                  mimeType: att.mimeType,
+                  size: att.size,
+                  url: att.content, // direct link to file
+                  author: att.author?.displayName,
+                  created: att.created,
+                }),
+              )
 
-        const subtasks = data.issues
-          .filter((issue) => issue.fields.issuetype.subtask)
-          .map((issue) => {
-            const { blocks, blockedBy } = extractBlockInfo(issue)
-            log(issue)
-            const attachments = (issue.fields.attachment || []).map(
-              (att) => ({
-                id: att.id,
-                filename: att.filename,
-                mimeType: att.mimeType,
-                size: att.size,
-                url: att.content, // direct link to file
-                author: att.author?.displayName,
-                created: att.created,
-              }),
+              return {
+                key: issue.key,
+                summary: issue.fields.summary,
+                status: issue.fields.status?.name,
+                statusCategory:
+                  issue.fields.status?.statusCategory?.name,
+                assignee: issue.fields.assignee?.displayName,
+                assigneeUrl: unescape(
+                  Object.values(
+                    issue.fields.assignee?.avatarUrls ?? [],
+                  )?.[0]?.match?.(
+                    /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
+                  )?.[1],
+                ),
+                // parent: issue.fields.parent?.key,
+                priority: issue.fields.priority?.name,
+                blocks,
+                blockedBy,
+                attachments,
+              }
+            })
+            .sort(
+              (a, s) =>
+                Number(a.key.replace(/^T\d+-/, "")) -
+                Number(s.key.replace(/^T\d+-/, "")),
             )
-
-            return {
-              key: issue.key,
-              summary: issue.fields.summary,
-              status: issue.fields.status?.name,
-              statusCategory:
-                issue.fields.status?.statusCategory?.name,
-              assignee: issue.fields.assignee?.displayName,
-              assigneeUrl: unescape(
-                Object.values(
-                  issue.fields.assignee?.avatarUrls ?? [],
-                )?.[0]?.match?.(
-                  /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
-                )?.[1],
-              ),
-              // parent: issue.fields.parent?.key,
-              priority: issue.fields.priority?.name,
-              blocks,
-              blockedBy,
-              attachments,
+          const doneKeys = new Set()
+          for (const task of subtasks) {
+            if (task.statusCategory === "Done") {
+              doneKeys.add(task.key)
             }
-          })
-          .sort(
-            (a, s) =>
-              Number(a.key.replace(/^T\d+-/, "")) -
-              Number(s.key.replace(/^T\d+-/, "")),
-          )
-        const doneKeys = new Set()
-        for (const task of subtasks) {
-          if (task.statusCategory === "Done") {
-            doneKeys.add(task.key)
           }
-        }
 
-        for (const task of subtasks) {
-          if (doneKeys.has(task.key)) {
-            task.blocks = []
-            task.blockedBy = []
-          } else {
-            task.blocks = task.blocks.filter((k) => !doneKeys.has(k))
-            task.blockedBy = task.blockedBy.filter(
-              (k) => !doneKeys.has(k),
-            )
+          for (const task of subtasks) {
+            if (doneKeys.has(task.key)) {
+              task.blocks = []
+              task.blockedBy = []
+            } else {
+              task.blocks = task.blocks.filter(
+                (k) => !doneKeys.has(k),
+              )
+              task.blockedBy = task.blockedBy.filter(
+                (k) => !doneKeys.has(k),
+              )
+            }
           }
+          cache.taskCache = subtasks
+        } else {
+          log("no new data")
         }
         // .filter(
         //   (e) =>
@@ -286,8 +321,8 @@
         return roots
       }
       async function getAttachmentImage(url) {
-        if (imageCache[url]) {
-          return URL.createObjectURL(imageCache[url])
+        if (cache.imageCache[url]) {
+          return URL.createObjectURL(cache.imageCache[url])
         }
         const res = await globalrequest(url, {
           responseType: "blob",
@@ -295,7 +330,9 @@
             Authorization: "Basic " + btoa(email + ":" + apiToken),
           },
         })
-        return URL.createObjectURL((imageCache[url] = res.response)) // local URL to use in <img>
+        return URL.createObjectURL(
+          (cache.imageCache[url] = res.response),
+        ) // local URL to use in <img>
       }
 
       function showTask(task) {
