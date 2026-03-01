@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <title>Jira API Test</title>
@@ -47,11 +47,10 @@
         </marker>
       </defs>
     </svg>
-    <script>
+    <script async="false">
       const a = loadlib("allfuncs")
       let rootBlockers = new Set()
       var uname = null
-      var email = null
       var tasks = {}
       toggleShowOnlySelf(a.qs("#toggleSelf"))
 
@@ -59,16 +58,16 @@
         showOnlySelf(localStorage.lastSelfShownState === "true")
         log(self)
         self.textContent =
-          localStorage.lastSelfShownState === "true" ?
-            "show all tasks"
-          : "show only own tasks"
+          localStorage.lastSelfShownState === "true"
+            ? "show all tasks"
+            : "show only own tasks"
       }
       function isBlockingMyTask(taskKey) {
         return Object.values(tasks).some(
           (t) =>
             t.assignee === uname &&
             t.blockedBy &&
-            t.blockedBy.includes(taskKey),
+            t.blockedBy.includes(taskKey)
         )
       }
       // var assigneeDict = {}
@@ -88,7 +87,7 @@
                 v.assigneeUrl
                   .replace(
                     "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/",
-                    "",
+                    ""
                   )
                   .replace(/-\d+\.png$/, "")
               ] ?? v.assigneeUrl
@@ -97,7 +96,7 @@
           rootBlockers = getRootBlockersOfMine()
           a.qs("#output").innerHTML = ""
           subtasks.forEach((e) =>
-            a.qs("#output").appendChild(showTask(e)),
+            a.qs("#output").appendChild(showTask(e))
           )
           if (localStorage.lastSelfShownState === "true")
             toggleShowOnlySelf(a.qs("#toggleSelf"))
@@ -107,7 +106,9 @@
           renderTasks()
         }
         const res = await globalrequest({
-          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment`,
+          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
+            jql
+          )}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment`,
           method: "GET",
           headers: {
             Authorization: "Basic " + btoa(email + ":" + apiToken),
@@ -134,7 +135,7 @@
                   url: att.content, // direct link to file
                   author: att.author?.displayName,
                   created: att.created,
-                }),
+                })
               )
 
               return {
@@ -146,10 +147,10 @@
                 assignee: issue.fields.assignee?.displayName,
                 assigneeUrl: unescape(
                   Object.values(
-                    issue.fields.assignee?.avatarUrls ?? [],
+                    issue.fields.assignee?.avatarUrls ?? []
                   )?.[0]?.match?.(
-                    /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
-                  )?.[1],
+                    /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/
+                  )?.[1]
                 ),
                 // parent: issue.fields.parent?.key,
                 priority: issue.fields.priority?.name,
@@ -161,7 +162,7 @@
             .sort(
               (a, s) =>
                 Number(a.key.replace(/^T\d+-/, "")) -
-                Number(s.key.replace(/^T\d+-/, "")),
+                Number(s.key.replace(/^T\d+-/, ""))
             )
           const doneKeys = new Set()
           for (const task of subtasks) {
@@ -176,10 +177,10 @@
               task.blockedBy = []
             } else {
               task.blocks = task.blocks.filter(
-                (k) => !doneKeys.has(k),
+                (k) => !doneKeys.has(k)
               )
               task.blockedBy = task.blockedBy.filter(
-                (k) => !doneKeys.has(k),
+                (k) => !doneKeys.has(k)
               )
             }
           }
@@ -260,13 +261,10 @@
         a.qsa(".task").map(
           (e) =>
             (e.style.display =
-              (
-                !on ||
-                uname ==
-                  tasks[e.getAttribute("data-task-key")].assignee
-              ) ?
-                "block"
-              : "none"),
+              !on ||
+              uname == tasks[e.getAttribute("data-task-key")].assignee
+                ? "block"
+                : "none")
         )
         drawAllDependencies()
       }
@@ -320,7 +318,7 @@
         })
         // timeEnd(url)
         return URL.createObjectURL(
-          (cache.imageCache[url] = res.response),
+          (cache.imageCache[url] = res.response)
         ) // local URL to use in <img>
       }
 
@@ -330,9 +328,10 @@
         const isBlocked = task.blockedBy.length > 0
         const isMine = task.assignee === uname
         // const isBlockingMine = isBlockingMyTask(task.key)
-        const glowClass =
-          isRootBlocker ? "blocking-mine"
-          : isMine ? "mine"
+        const glowClass = isRootBlocker
+          ? "blocking-mine"
+          : isMine
+          ? "mine"
           : ""
         let statusClass = "todo"
         if (task.statusCategory === "In Progress")
@@ -358,7 +357,7 @@
                 href: jiraUrl,
                 target: "_blank",
               },
-              [task.key],
+              [task.key]
             ),
             isBlocked &&
               a.newelem("div", { class: "blocked-section" }, [
@@ -390,7 +389,7 @@
                             marginLeft: "4px",
                           },
                         }),
-                      ],
+                      ]
                     ),
                     i < task.blockedBy.length - 1 ? ", " : null,
                   ]
@@ -425,35 +424,35 @@
             //   " ",
             //   task.parent,
             // ]),
-            task.attachments.length ?
-              a.newelem("div", { class: "attachments" }, [
-                task.attachments.map((att, idx) => {
-                  var img = a.newelem(
-                    "img",
-                    {
-                      width: "100px",
-                      maxHeight: "300px",
-                    },
-                    [],
-                  )
-                  getAttachmentImage(att.url).then((url) => {
-                    img.parentElement.href = url
-                    img.src = url
-                    img.onload = drawAllDependencies
-                  })
-                  return a.newelem(
-                    "a",
-                    {
-                      href: att.url,
-                      target: "_blank",
-                      download: task.key + " #" + (idx + 1),
-                    },
-                    [img],
-                  )
-                }),
-              ])
-            : null,
-          ].filter(Boolean),
+            task.attachments.length
+              ? a.newelem("div", { class: "attachments" }, [
+                  task.attachments.map((att, idx) => {
+                    var img = a.newelem(
+                      "img",
+                      {
+                        width: "100px",
+                        maxHeight: "300px",
+                      },
+                      []
+                    )
+                    getAttachmentImage(att.url).then((url) => {
+                      img.parentElement.href = url
+                      img.src = url
+                      img.onload = drawAllDependencies
+                    })
+                    return a.newelem(
+                      "a",
+                      {
+                        href: att.url,
+                        target: "_blank",
+                        download: task.key + " #" + (idx + 1),
+                      },
+                      [img]
+                    )
+                  }),
+                ])
+              : null,
+          ].filter(Boolean)
         )
       }
       async function getAllProjects() {
@@ -485,7 +484,7 @@
 
         const res = await globalrequest({
           url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
-            jql,
+            jql
           )}&fields=assignee&maxResults=100`,
           method: "GET",
           headers: {
@@ -546,9 +545,9 @@
         if (absDx > absDy) {
           // horizontal connection
           x =
-            dx > 0 ?
-              rectFrom.right - inset + window.scrollX
-            : rectFrom.left + inset + window.scrollX
+            dx > 0
+              ? rectFrom.right - inset + window.scrollX
+              : rectFrom.left + inset + window.scrollX
           y = fromCenterY
           side = "x"
         } else {
@@ -556,9 +555,9 @@
           side = "y"
           x = fromCenterX
           y =
-            dy > 0 ?
-              rectFrom.bottom - inset + window.scrollY
-            : rectFrom.top + inset + window.scrollY
+            dy > 0
+              ? rectFrom.bottom - inset + window.scrollY
+              : rectFrom.top + inset + window.scrollY
         }
 
         return { x, y, side }
@@ -574,7 +573,7 @@
         const rect = fromEl.getBoundingClientRect()
         const path = document.createElementNS(
           "http://www.w3.org/2000/svg",
-          "path",
+          "path"
         )
         const seed = hashStringToInt(taskKey) // convert ID to number
 
@@ -582,25 +581,25 @@
           end.y += randomIntFromSeed(
             seed,
             -rect.height / 2,
-            rect.height / 2,
+            rect.height / 2
           )
         } else {
           end.x += randomIntFromSeed(
             seed,
             -rect.width / 2,
-            rect.width / 2,
+            rect.width / 2
           )
         }
         path.setAttribute(
           "d",
-          `M ${start.x},${start.y} ${end.x},${end.y}`,
+          `M ${start.x},${start.y} ${end.x},${end.y}`
         )
         // path.setAttribute("stroke", "#de350b")
         path.setAttribute(
           "stroke",
           getComputedStyle(toEl)
             .borderLeftColor.replace("rgb", "rgba")
-            .replace(")", ", .5)"),
+            .replace(")", ", .5)")
         )
         path.setAttribute("stroke-width", "2")
         path.setAttribute("fill", "none")
@@ -623,13 +622,13 @@
           var blockerLinks = a.qsa(".blocker-link", taskDiv)
           task.blockedBy.forEach((blockerKey) => {
             const blockerDiv = document.querySelector(
-              `[data-task-key="${blockerKey}"]`,
+              `[data-task-key="${blockerKey}"]`
             )
             if (blockerDiv)
               drawArrowEdge(
                 blockerLinks.find((e) => e.textContent == blockerKey),
                 blockerDiv,
-                taskDiv.getAttribute("data-task-key"),
+                taskDiv.getAttribute("data-task-key")
               ) // blocked → blocker
           })
         })

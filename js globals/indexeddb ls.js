@@ -24,7 +24,10 @@
           const db = e.target.result
           if (!db.objectStoreNames.contains(storeName)) {
             // keyPath is null since we handle keys manually
-            db.createObjectStore(storeName, { keyPath: null })
+            db.createObjectStore(storeName, {
+              keyPath: "id",
+              autoIncrement: true,
+            })
           }
         }
 
@@ -34,8 +37,9 @@
     }
 
     async function setup({ storeName, storePrefix = "" }) {
-      const dbName =
-        storePrefix ? `${storePrefix}_${storeName}` : storeName
+      const dbName = storePrefix
+        ? `${storePrefix}_${storeName}`
+        : storeName
       const db = await openDB({ dbName, storeName })
       return { db, storeName }
     }
@@ -220,12 +224,15 @@
           await new Promise((resolve, reject) => {
             const tx = dbObj.db.transaction(
               dbObj.storeName,
-              "readwrite",
+              "readwrite"
             )
             const store = tx.objectStore(dbObj.storeName)
             for (const item of items) {
-              if (item.val === undefined) store.delete(item.id)
-              else store.put(item)
+              if (item.val === undefined) {
+                store.delete(item.id)
+              } else {
+                store.put(item)
+              }
             }
             tx.oncomplete = resolve
             tx.onerror = () => reject(tx.error)
@@ -370,6 +377,6 @@
       }
 
       return new Proxy(state, handler)
-    },
+    }
   )
 })()
