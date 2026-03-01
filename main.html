@@ -184,7 +184,7 @@
               )
             }
           }
-          cache.taskCache = subtasks
+          cache.taskCache = subtaskss
           renderTasks()
         } else {
           log("no new data")
@@ -276,11 +276,10 @@
           visited.add(taskKey)
 
           const task = tasks[taskKey]
-          if (
-            !task ||
-            !task.blockedBy ||
-            task.blockedBy.length === 0
-          ) {
+          // ADD THIS: If the blocker is already Done, it's not a root blocker anymore
+          if (!task || task.statusCategory === "Done") return
+
+          if (!task.blockedBy || task.blockedBy.length === 0) {
             roots.add(taskKey)
             return
           }
