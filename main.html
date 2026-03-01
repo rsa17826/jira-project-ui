@@ -98,9 +98,28 @@
           subtasks.forEach((e) =>
             a.qs("#output").appendChild(showTask(e))
           )
-          if (localStorage.lastSelfShownState === "true")
-            toggleShowOnlySelf(a.qs("#toggleSelf"))
-          drawAllDependencies()
+          const doneKeys = new Set(
+            subtasks
+              .filter((t) => t.statusCategory === "Done")
+              .map((t) => t.key)
+          )
+
+          for (const task of subtasks) {
+            if (doneKeys.has(task.key)) {
+              task.blocks = []
+              task.blockedBy = []
+            } else {
+              task.blocks = task.blocks.filter(
+                (k) => !doneKeys.has(k)
+              )
+              task.blockedBy = task.blockedBy.filter(
+                (k) => !doneKeys.has(k)
+              )
+            }
+            if (localStorage.lastSelfShownState === "true")
+              toggleShowOnlySelf(a.qs("#toggleSelf"))
+            drawAllDependencies()
+          }
         }
         if ((subtasks = cache.taskCache)) {
           renderTasks()
@@ -164,26 +183,7 @@
                 Number(a.key.replace(/^T\d+-/, "")) -
                 Number(s.key.replace(/^T\d+-/, ""))
             )
-          const doneKeys = new Set()
-          for (const task of subtasks) {
-            if (task.statusCategory === "Done") {
-              doneKeys.add(task.key)
-            }
-          }
 
-          for (const task of subtasks) {
-            if (doneKeys.has(task.key)) {
-              task.blocks = []
-              task.blockedBy = []
-            } else {
-              task.blocks = task.blocks.filter(
-                (k) => !doneKeys.has(k)
-              )
-              task.blockedBy = task.blockedBy.filter(
-                (k) => !doneKeys.has(k)
-              )
-            }
-          }
           cache.taskCache = subtaskss
           renderTasks()
         } else {
