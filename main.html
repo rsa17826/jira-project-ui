@@ -134,7 +134,7 @@
             Accept: "application/json",
           },
         })
-        var newHash = hashStringToInt(res.text+1)
+        var newHash = hashStringToInt(res.text + 1)
         // log(cache.taskCacheHash, newHash)
         if (!cache.taskCacheHash || cache.taskCacheHash !== newHash) {
           log("new data")
@@ -388,7 +388,7 @@
                           style: {
                             verticalAlign: "middle",
                             borderRadius: "50%",
-                            marginLeft: "4px",
+                            marginLeft: "2px",
                           },
                         }),
                       ],
@@ -628,7 +628,12 @@
             )
             if (blockerDiv)
               drawArrowEdge(
-                blockerLinks.find((e) => e.textContent == blockerKey),
+                a.qs(
+                  "img",
+                  blockerLinks.find(
+                    (e) => e.textContent == blockerKey,
+                  ),
+                ),
                 blockerDiv,
                 taskDiv.getAttribute("data-task-key"),
               ) // blocked → blocker
