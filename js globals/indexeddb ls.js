@@ -37,9 +37,8 @@
     }
 
     async function setup({ storeName, storePrefix = "" }) {
-      const dbName = storePrefix
-        ? `${storePrefix}_${storeName}`
-        : storeName
+      const dbName =
+        storePrefix ? `${storePrefix}_${storeName}` : storeName
       const db = await openDB({ dbName, storeName })
       return { db, storeName }
     }
@@ -151,6 +150,9 @@
 
       function heartbeat() {
         channel.postMessage({ type: "heartbeat", id: TAB_ID })
+        channel.onmessage({
+          data: { type: "heartbeat", id: TAB_ID },
+        })
       }
 
       channel.onmessage = (e) => {
@@ -224,7 +226,7 @@
           await new Promise((resolve, reject) => {
             const tx = dbObj.db.transaction(
               dbObj.storeName,
-              "readwrite"
+              "readwrite",
             )
             const store = tx.objectStore(dbObj.storeName)
             for (const item of items) {
@@ -377,6 +379,6 @@
       }
 
       return new Proxy(state, handler)
-    }
+    },
   )
 })()
