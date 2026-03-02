@@ -84,6 +84,7 @@
         storePrefix: "",
         ...options,
       })
+      const proxyCache = new WeakMap()
 
       /* =========================
        LOAD INITIAL DATA
@@ -94,6 +95,7 @@
 
       for (const { id, val } of records) {
         localData[id] = val
+        // shouldProxy(val) ? createDeepProxy(id, val) : val
       }
 
       /* =========================
@@ -212,7 +214,63 @@
           await flush()
         })
       }
+      function clone(val) {
+        return val
+      }
+      function isPlainObject(value) {
+        if (value === null || typeof value !== "object") return false
 
+        const proto = Object.getPrototypeOf(value)
+
+        return proto === Object.prototype || proto === null
+      }
+
+      function shouldProxy(value) {
+        return Array.isArray(value) || isPlainObject(value)
+      }
+      function createDeepProxy(rootKey, target) {
+        if (target === null || typeof target !== "object")
+          return target
+
+        if (proxyCache.has(target)) return proxyCache.get(target)
+
+        if (shouldProxy(target)) {
+          const proxy = new Proxy(target, {
+            get(obj, prop) {
+              const value = obj[prop]
+
+              return createDeepProxy(rootKey, value)
+            },
+
+            set(obj, prop, value) {
+              obj[prop] = value
+
+              // Persist entire root object
+              queueWrite(rootKey, clone(localData[rootKey]))
+
+              emit("set", { key: rootKey, deep: true })
+              emit("change", { type: "deep-set", key: rootKey })
+
+              return true
+            },
+
+            deleteProperty(obj, prop) {
+              delete obj[prop]
+
+              queueWrite(rootKey, clone(localData[rootKey]))
+
+              emit("delete", { key: rootKey, deep: true })
+              emit("change", { type: "deep-delete", key: rootKey })
+
+              return true
+            },
+          })
+
+          proxyCache.set(target, proxy)
+          return proxy
+        }
+        return target
+      }
       function queueWrite(key, value) {
         if (!isLeader) {
           channel.postMessage({ type: "write-request", key, value })
@@ -283,7 +341,10 @@
       function applyExternal(items) {
         for (const { id, val } of items) {
           if (val === undefined) delete localData[id]
-          else localData[id] = val
+          else {
+            localData[id] = val
+            // shouldProxy(val) ? createDeepProxy(id, val) : val
+          }
         }
 
         emit("external-change", items)
@@ -296,7 +357,9 @@
 
       function setProp(key, value) {
         localData[key] = value
-        queueWrite(key, value)
+        // shouldProxy(value) ? createDeepProxy(key, value) : value
+
+        queueWrite(key, clone(localData[key]))
 
         emit("set", { key, value })
         emit("change", { type: "set", key, value })
@@ -370,7 +433,7 @@
               }
 
             default:
-              return Reflect.get(target, prop)
+              return createDeepProxy(prop, Reflect.get(target, prop))
           }
         },
       }
