@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         lib:indexeddb ls
-// @version      15
-// @description  IndexedDB reactive engine with array keys, structural sharing
+// @version      14
+// @description  none
 // @license      GPLv3
 // @run-at       document-start
 // @author       rssaromeo
 // @match        *://*/*
+// @include      *
+// @tag          lib
 // @grant        none
 // ==/UserScript==
 
@@ -15,6 +17,7 @@
   /* =========================================================
      INDEXEDDB HELPERS
   ========================================================== */
+
   const idb = (() => {
     function openDB({ dbName, storeName, keyPath = "id" }) {
       return new Promise((resolve, reject) => {
@@ -23,11 +26,7 @@
         request.onupgradeneeded = (e) => {
           const db = e.target.result
           if (!db.objectStoreNames.contains(storeName)) {
-            // keyPath is null since we handle keys manually
-            db.createObjectStore(storeName, {
-              keyPath: "id",
-              autoIncrement: true,
-            })
+            db.createObjectStore(storeName, { keyPath })
           }
         }
 
@@ -36,10 +35,15 @@
       })
     }
 
-    async function setup({ storeName, storePrefix = "" }) {
+    async function setup({
+      storeName,
+      keyPath = "id",
+      storePrefix = "",
+    }) {
       const dbName =
         storePrefix ? `${storePrefix}_${storeName}` : storeName
-      const db = await openDB({ dbName, storeName })
+
+      const db = await openDB({ dbName, storeName, keyPath })
       return { db, storeName }
     }
 
@@ -50,8 +54,7 @@
 
     function getAll(dbObj) {
       return new Promise((resolve, reject) => {
-        const store = getStore(dbObj, "readonly")
-        const request = store.getAll()
+        const request = getStore(dbObj).getAll()
         request.onsuccess = () => resolve(request.result || [])
         request.onerror = () => reject(request.error)
       })
@@ -59,8 +62,7 @@
 
     function clearAll(dbObj) {
       return new Promise((resolve, reject) => {
-        const store = getStore(dbObj, "readwrite")
-        const request = store.clear()
+        const request = getStore(dbObj, "readwrite").clear()
         request.onsuccess = () => resolve(true)
         request.onerror = () => reject(request.error)
       })
@@ -72,60 +74,59 @@
   /* =========================================================
      MAIN LIB
   ========================================================== */
+
   lib.savelib(
     "indexeddb ls",
     async function createDB(name, options = {}) {
-      const dbObj = await idb.setup({ storeName: name, ...options })
+      const dbObj = await idb.setup({
+        storeName: name,
+        keyPath: "id",
+        storePrefix: "",
+        ...options,
+      })
 
       /* =========================
-         LOAD INITIAL DATA
-      ========================== */
-      const records = await idb.getAll(dbObj)
-      const state = Object.create(null)
-      const proxyCache = new WeakMap()
+       LOAD INITIAL DATA
+    ========================== */
 
-      function setByPath(obj, pathArray, value) {
-        let current = obj
-        for (let i = 0; i < pathArray.length - 1; i++) {
-          const key = pathArray[i]
-          if (!current[key] || typeof current[key] !== "object")
-            current[key] = {}
-          current = current[key]
-        }
-        const lastKey = pathArray[pathArray.length - 1]
-        if (value === undefined) delete current[lastKey]
-        else current[lastKey] = value
-      }
+      const records = await idb.getAll(dbObj)
+      let localData = {}
 
       for (const { id, val } of records) {
-        // id is stored as array
-        setByPath(state, id, val)
+        localData[id] = val
       }
 
       /* =========================
-         EVENT SYSTEM
-      ========================== */
+       EVENT SYSTEM
+    ========================== */
+
       const listeners = new Map()
+
       function on(event, cb) {
         if (!listeners.has(event)) listeners.set(event, new Set())
         listeners.get(event).add(cb)
         return [event, cb]
       }
+
       function off([event, cb]) {
         listeners.get(event)?.delete(cb)
       }
+
       function emit(event, payload) {
         listeners.get(event)?.forEach((cb) => cb(payload))
       }
 
       /* =========================
-         LEADER SYSTEM
-      ========================== */
+       TAB LEADER SYSTEM
+    ========================== */
+
       const TAB_ID = crypto.randomUUID()
       const channel = new BroadcastChannel("indexeddb_ls_" + name)
+
       const tabs = new Map([[TAB_ID, Date.now()]])
       let leaderId = TAB_ID
       let isLeader = true
+
       const HEARTBEAT_INTERVAL = 1000
       const LEADER_TIMEOUT = 3000
 
@@ -134,43 +135,52 @@
           .filter(([, t]) => Date.now() - t < LEADER_TIMEOUT)
           .map(([id]) => id)
           .sort()
+
         if (!alive.length) return
+
         const newLeader = alive[0]
         if (newLeader === leaderId) return
+
         const wasLeader = isLeader
         leaderId = newLeader
         isLeader = leaderId === TAB_ID
-        if (!isLeader && wasLeader)
+
+        if (!isLeader && wasLeader) {
           emit("leader-stepped-down", {
             oldLeaderId: TAB_ID,
             newLeaderId: leaderId,
           })
-        if (isLeader) emit("leader-elected", { leaderId })
+        }
+
+        if (isLeader) {
+          emit("leader-elected", { leaderId })
+        }
       }
 
       function heartbeat() {
         channel.postMessage({ type: "heartbeat", id: TAB_ID })
-        channel.onmessage({
-          data: { type: "heartbeat", id: TAB_ID },
-        })
       }
 
       channel.onmessage = (e) => {
         const msg = e.data
         const now = Date.now()
+
         switch (msg.type) {
           case "hello":
           case "heartbeat":
             tabs.set(msg.id, now)
             electLeader()
             break
+
           case "goodbye":
             tabs.delete(msg.id)
             electLeader()
             break
+
           case "write-request":
             if (isLeader) queueWrite(msg.key, msg.value)
             break
+
           case "external-update":
             applyExternal(msg.items)
             break
@@ -179,13 +189,15 @@
 
       channel.postMessage({ type: "hello", id: TAB_ID })
       setInterval(heartbeat, HEARTBEAT_INTERVAL)
+
       window.addEventListener("beforeunload", () => {
         channel.postMessage({ type: "goodbye", id: TAB_ID })
       })
 
       /* =========================
-         BATCH WRITE ENGINE
-      ========================== */
+       BATCH WRITE ENGINE
+    ========================== */
+
       const writeQueue = new Map()
       let flushScheduled = false
       let flushing = false
@@ -194,22 +206,20 @@
       function scheduleFlush() {
         if (flushScheduled) return
         flushScheduled = true
+
         queueMicrotask(async () => {
           flushScheduled = false
           await flush()
         })
       }
 
-      function queueWrite(pathArray, value) {
+      function queueWrite(key, value) {
         if (!isLeader) {
-          channel.postMessage({
-            type: "write-request",
-            key: pathArray,
-            value,
-          })
+          channel.postMessage({ type: "write-request", key, value })
           return
         }
-        writeQueue.set(pathArray, { id: pathArray, val: value })
+
+        writeQueue.set(key, { id: key, val: value })
         scheduleFlush()
       }
 
@@ -218,7 +228,9 @@
           resolvePending()
           return
         }
+
         flushing = true
+
         const items = [...writeQueue.values()]
         writeQueue.clear()
 
@@ -229,6 +241,7 @@
               "readwrite",
             )
             const store = tx.objectStore(dbObj.storeName)
+
             for (const item of items) {
               if (item.val === undefined) {
                 store.delete(item.id)
@@ -236,6 +249,7 @@
                 store.put(item)
               }
             }
+
             tx.oncomplete = resolve
             tx.onerror = () => reject(tx.error)
           })
@@ -245,6 +259,8 @@
         } finally {
           flushing = false
           resolvePending()
+
+          // If new writes came during flush, schedule again
           if (writeQueue.size) scheduleFlush()
         }
       }
@@ -256,63 +272,64 @@
 
       function doneSaving() {
         return new Promise((resolve) => {
-          if (!writeQueue.size && !flushing && !flushScheduled)
+          if (!writeQueue.size && !flushing && !flushScheduled) {
             resolve()
-          else pendingResolves.push(resolve)
+          } else {
+            pendingResolves.push(resolve)
+          }
         })
       }
 
       function applyExternal(items) {
-        for (const { id, val } of items) setByPath(state, id, val)
+        for (const { id, val } of items) {
+          if (val === undefined) delete localData[id]
+          else localData[id] = val
+        }
+
         emit("external-change", items)
         emit("change", { type: "external", items })
       }
 
       /* =========================
-         REACTIVE PROXY
-      ========================== */
-      function isPlainObject(value) {
-        if (value === null) return false
-        if (Array.isArray(value)) return true // arrays are OK to proxy
-        if (typeof value !== "object") return false // primitives (string, number, boolean) are returned as-is
-        const proto = Object.getPrototypeOf(value)
-        return proto === Object.prototype // only plain objects
+       CORE OPERATIONS
+    ========================== */
+
+      function setProp(key, value) {
+        localData[key] = value
+        queueWrite(key, value)
+
+        emit("set", { key, value })
+        emit("change", { type: "set", key, value })
       }
-      function reactive(obj, basePath = []) {
-        if (!Array.isArray(basePath)) basePath = [basePath]
-        if (!isPlainObject(obj)) return obj // <-- don't proxy Blobs, FileHandles, etc.
-        if (proxyCache.has(obj)) return proxyCache.get(obj)
 
-        const proxy = new Proxy(obj, {
-          get(target, prop) {
-            return reactive(target[prop], [...basePath, prop])
-          },
-          set(target, prop, value) {
-            target[prop] = value
-            queueWrite([...basePath, prop], value)
-            emit("change", { type: "set", path: [...basePath, prop] })
-            return true
-          },
-          deleteProperty(target, prop) {
-            delete target[prop]
-            queueWrite([...basePath, prop], undefined)
-            emit("change", {
-              type: "delete",
-              path: [...basePath, prop],
-            })
-            return true
-          },
-        })
+      function deleteProp(key) {
+        if (!(key in localData)) return true
 
-        proxyCache.set(obj, proxy)
-        return proxy
+        delete localData[key]
+        queueWrite(key, undefined)
+
+        emit("delete", { key })
+        emit("change", { type: "delete", key })
+
+        return true
       }
 
       /* =========================
-         MAIN PROXY HANDLER
-      ========================== */
+       PROXY
+    ========================== */
+
       const handler = {
-        get(_, prop) {
+        set(target, prop, value) {
+          target[prop] = value
+          setProp(prop, value)
+          return true
+        },
+
+        deleteProperty(target, prop) {
+          return deleteProp(prop)
+        },
+
+        get(target, prop) {
           switch (prop) {
             case "on":
               return on
@@ -321,64 +338,44 @@
             case "doneSaving":
               return doneSaving()
             case "all":
-              return state
+              return localData
+
             case "clear":
               return async () => {
                 await idb.clearAll(dbObj)
-                for (const key of Object.keys(state))
-                  delete state[key]
+
+                // ✅ Properly clear existing proxy target
+                for (const key of Object.keys(localData)) {
+                  delete localData[key]
+                }
+
                 emit("clear", {})
                 emit("change", { type: "clear" })
-                return state
+
+                return localData
               }
             case "saveall":
               return async () => {
-                for (const [k, v] of Object.entries(state))
-                  queueWrite([k], v)
+                for (const [k, v] of Object.entries(localData)) {
+                  queueWrite(k, v)
+                }
                 await flush()
               }
+
             case Symbol.iterator:
               return function* () {
-                for (const [id, val] of Object.entries(state))
+                for (const [id, val] of Object.entries(localData)) {
                   yield { id, val }
+                }
               }
+
             default:
-              return reactive(state[prop], [prop])
+              return Reflect.get(target, prop)
           }
-        },
-        set(_, prop, value) {
-          state[prop] = value
-          queueWrite([prop], value)
-          emit("set", { key: prop, value })
-          emit("change", { type: "set", key: prop, value })
-          return true
-        },
-        deleteProperty(_, prop) {
-          if (!(prop in state)) return true
-          delete state[prop]
-          queueWrite([prop], undefined)
-          emit("delete", { key: prop })
-          emit("change", { type: "delete", key: prop })
-          return true
-        },
-        ownKeys() {
-          return Reflect.ownKeys(state)
-        },
-        has(_, prop) {
-          return prop in state
-        },
-        getOwnPropertyDescriptor(_, prop) {
-          if (prop in state)
-            return {
-              configurable: true,
-              enumerable: true,
-              value: state[prop],
-              writable: true,
-            }
         },
       }
 
-      return new Proxy(state, handler)
+      return new Proxy(localData, handler)
     },
   )
 })()

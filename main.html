@@ -134,7 +134,7 @@
             Accept: "application/json",
           },
         })
-        var newHash = hashStringToInt(res.text)
+        var newHash = hashStringToInt(res.text+1)
         // log(cache.taskCacheHash, newHash)
         if (!cache.taskCacheHash || cache.taskCacheHash !== newHash) {
           log("new data")
