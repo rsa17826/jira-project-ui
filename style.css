@@ -1,6 +1,6 @@
 .task {
-  padding: 8px 12px; /* a bit tighter padding */
-  margin-bottom: 8px; /* less vertical space between tasks */
+  padding: 8px 8px; /* a bit tighter padding */
+  margin-bottom: 4px; /* less vertical space between tasks */
   border-radius: 6px;
   border-left: 6px solid;
   background: #f4f6f8;
@@ -78,7 +78,7 @@ body {
 .task {
   flex: 0 0 auto; /* prevent stretching */
   min-width: 250px; /* optional: minimum task width */
-  padding: 8px 12px;
+  padding: 8px 8px;
   border-radius: 6px;
   border-left: 6px solid;
   background: #f4f6f8;
