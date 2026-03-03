@@ -55,7 +55,45 @@
       let allBlockers = new Set()
       var uname = null
       var tasks = {}
+      function renderTasks() {
+        for (var v of subtasks) {
+          v.assigneeUrl =
+            imageReplaces[
+              v.assigneeUrl
+                .replace(
+                  "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/",
+                  "",
+                )
+                .replace(/-\d+\.png$/, "")
+            ] ?? v.assigneeUrl
+          tasks[v.key] = v
+        }
+        ;[rootBlockers, allBlockers] = getRootBlockersOfMine()
+        a.qs("#output").innerHTML = ""
+        subtasks.forEach((e) =>
+          a.qs("#output").appendChild(showTask(e)),
+        )
+        const doneKeys = new Set(
+          subtasks
+            .filter((t) => t.statusCategory === "Done")
+            .map((t) => t.key),
+        )
 
+        for (const task of subtasks) {
+          if (doneKeys.has(task.key)) {
+            task.blocks = []
+            task.blockedBy = []
+          } else {
+            task.blocks = task.blocks.filter((k) => !doneKeys.has(k))
+            task.blockedBy = task.blockedBy.filter(
+              (k) => !doneKeys.has(k),
+            )
+          }
+          if (localStorage.lastSelfShownState === "true")
+            toggleShowOnlySelf(a.qs("#toggleSelf"))
+          drawAllDependencies()
+        }
+      }
       function isBlockingMyTask(taskKey) {
         return Object.values(tasks).some(
           (t) =>
@@ -64,83 +102,40 @@
             t.blockedBy.includes(taskKey),
         )
       }
-      // var assigneeDict = {}
-      async function getSubtasks() {
+      ;(async () => {
         const jql = `
           project = "${currentProject}"
           AND issuetype IN subTaskIssueTypes()
           ORDER BY created DESC
         `
-        globalThis.cache = await loadlib("indexeddb ls")("cache")
-        cache.imageCache ??= {}
-        var subtasks
-        function renderTasks() {
-          for (var v of subtasks) {
-            v.assigneeUrl =
-              imageReplaces[
-                v.assigneeUrl
-                  .replace(
-                    "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/",
-                    "",
-                  )
-                  .replace(/-\d+\.png$/, "")
-              ] ?? v.assigneeUrl
-            tasks[v.key] = v
-          }
-          ;[rootBlockers, allBlockers] = getRootBlockersOfMine()
-          a.qs("#output").innerHTML = ""
-          subtasks.forEach((e) =>
-            a.qs("#output").appendChild(showTask(e)),
-          )
-          const doneKeys = new Set(
-            subtasks
-              .filter((t) => t.statusCategory === "Done")
-              .map((t) => t.key),
-          )
+        while (1) {
+          const res = await globalrequest({
+            url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
+              jql,
+            )}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment`,
+            method: "GET",
+            headers: {
+              Authorization: "Basic " + btoa(email + ":" + apiToken),
+              Accept: "application/json",
+            },
+          })
+          var newHash = hashStringToInt(res.text + 1)
+          // log(cache.taskCacheHash, newHash)
+          if (
+            !cache.taskCacheHash ||
+            cache.taskCacheHash !== newHash
+          ) {
+            log("new data")
+            const data = JSON.parse(res.text)
 
-          for (const task of subtasks) {
-            if (doneKeys.has(task.key)) {
-              task.blocks = []
-              task.blockedBy = []
-            } else {
-              task.blocks = task.blocks.filter(
-                (k) => !doneKeys.has(k),
-              )
-              task.blockedBy = task.blockedBy.filter(
-                (k) => !doneKeys.has(k),
-              )
-            }
-            if (localStorage.lastSelfShownState === "true")
-              toggleShowOnlySelf(a.qs("#toggleSelf"))
-            drawAllDependencies()
-          }
-        }
-        if ((subtasks = cache.taskCache)) {
-          renderTasks()
-        }
-        const res = await globalrequest({
-          url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
-            jql,
-          )}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment`,
-          method: "GET",
-          headers: {
-            Authorization: "Basic " + btoa(email + ":" + apiToken),
-            Accept: "application/json",
-          },
-        })
-        var newHash = hashStringToInt(res.text + 1)
-        // log(cache.taskCacheHash, newHash)
-        if (!cache.taskCacheHash || cache.taskCacheHash !== newHash) {
-          log("new data")
-          const data = JSON.parse(res.text)
-
-          subtasks = data.issues
-            .filter((issue) => issue.fields.issuetype.subtask)
-            .map((issue) => {
-              const { blocks, blockedBy } = extractBlockInfo(issue)
-              log(issue)
-              const attachments = (issue.fields.attachment || []).map(
-                (att) => ({
+            var subtasks = data.issues
+              .filter((issue) => issue.fields.issuetype.subtask)
+              .map((issue) => {
+                const { blocks, blockedBy } = extractBlockInfo(issue)
+                log(issue)
+                const attachments = (
+                  issue.fields.attachment || []
+                ).map((att) => ({
                   id: att.id,
                   filename: att.filename,
                   mimeType: att.mimeType,
@@ -148,42 +143,53 @@
                   url: att.content, // direct link to file
                   author: att.author?.displayName,
                   created: att.created,
-                }),
+                }))
+                log(issue.key, issue.fields.assignee?.avatarUrls)
+                return {
+                  key: issue.key,
+                  summary: issue.fields.summary,
+                  status: issue.fields.status?.name,
+                  statusCategory:
+                    issue.fields.status?.statusCategory?.name,
+                  assignee: issue.fields.assignee?.displayName,
+                  assigneeUrl: unescape(
+                    Object.values(
+                      issue.fields.assignee?.avatarUrls ?? [],
+                    )?.[0]?.match?.(
+                      /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
+                    )?.[1],
+                  ),
+                  // parent: issue.fields.parent?.key,
+                  priority: issue.fields.priority?.name,
+                  blocks,
+                  blockedBy,
+                  attachments,
+                }
+              })
+              .sort(
+                (a, s) =>
+                  Number(a.key.replace(/^T\d+-/, "")) -
+                  Number(s.key.replace(/^T\d+-/, "")),
               )
-              log(issue.key, issue.fields.assignee?.avatarUrls)
-              return {
-                key: issue.key,
-                summary: issue.fields.summary,
-                status: issue.fields.status?.name,
-                statusCategory:
-                  issue.fields.status?.statusCategory?.name,
-                assignee: issue.fields.assignee?.displayName,
-                assigneeUrl: unescape(
-                  Object.values(
-                    issue.fields.assignee?.avatarUrls ?? [],
-                  )?.[0]?.match?.(
-                    /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
-                  )?.[1],
-                ),
-                // parent: issue.fields.parent?.key,
-                priority: issue.fields.priority?.name,
-                blocks,
-                blockedBy,
-                attachments,
-              }
-            })
-            .sort(
-              (a, s) =>
-                Number(a.key.replace(/^T\d+-/, "")) -
-                Number(s.key.replace(/^T\d+-/, "")),
-            )
 
-          // cache.taskCacheHash = newHash
-          // cache.taskCache = subtasks
-          renderTasks()
-        } else {
-          log("no new data")
+            cache.taskCacheHash = newHash
+            cache.taskCache = subtasks
+            renderTasks()
+          } else {
+            log("no new data")
+          }
+          await a.wait(5000 * 60)
         }
+      })()
+      // var assigneeDict = {}
+      async function getSubtasks() {
+        globalThis.cache = await loadlib("indexeddb ls")("cache")
+        cache.imageCache ??= {}
+
+        if ((subtasks = cache.taskCache)) {
+          renderTasks()
+        }
+
         // .filter(
         //   (e) =>
         //     e.status !== "In Review" &&
