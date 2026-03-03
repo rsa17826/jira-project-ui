@@ -17,6 +17,11 @@
       <input type="checkbox" id="showOnlyMine" />
       showOnlyMine
     </label>
+    <label>
+      <input type="number" id="reloadInterval" />
+      reloadInterval in mins
+    </label>
+    <label id="status"></label>
     <pre id="output"></pre>
     <script src="./js globals/libloader.js"></script>
     <script src="./js globals/allfuncs.js"></script>
@@ -55,6 +60,7 @@
       let allBlockers = new Set()
       var uname = null
       var tasks = {}
+      var subtasks = []
       function renderTasks() {
         for (var v of subtasks) {
           v.assigneeUrl =
@@ -102,6 +108,12 @@
             t.blockedBy.includes(taskKey),
         )
       }
+      a.qs("#reloadInterval").value = Number(
+        localStorage.reloadInterval || 5,
+      )
+      a.listen("#reloadInterval", "input", function () {
+        localStorage.reloadInterval = this.value
+      })
       ;(async () => {
         const jql = `
           project = "${currentProject}"
@@ -128,7 +140,7 @@
             log("new data")
             const data = JSON.parse(res.text)
 
-            var subtasks = data.issues
+            subtasks = data.issues
               .filter((issue) => issue.fields.issuetype.subtask)
               .map((issue) => {
                 const { blocks, blockedBy } = extractBlockInfo(issue)
@@ -173,12 +185,28 @@
               )
 
             cache.taskCacheHash = newHash
-            cache.taskCache = subtasks
+            // cache.taskCache = subtasks
             renderTasks()
+            const now = new Date()
+
+            a.qs("#status").textContent =
+              "--- new data found: " +
+              now.getHours() +
+              ":" +
+              now.getMinutes() +
+              " --- " +
+              Math.random()
           } else {
-            log("no new data")
+            const now = new Date()
+            a.qs("#status").textContent =
+              "--- no new data: " +
+              now.getHours() +
+              ":" +
+              now.getMinutes() +
+              " --- " +
+              Math.random()
           }
-          await a.wait(5000 * 60)
+          await a.wait(a.qs("#reloadInterval").value * 1000 * 60)
         }
       })()
       // var assigneeDict = {}
