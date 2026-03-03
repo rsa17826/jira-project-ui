@@ -114,12 +114,20 @@
       a.listen("#reloadInterval", "input", function () {
         localStorage.reloadInterval = this.value
       })
-      ;(async () => {
+      // var assigneeDict = {}
+      async function getSubtasks() {
+        globalThis.cache = await loadlib("indexeddb ls")("cache")
+        cache.imageCache ??= {}
+
+        if ((subtasks = cache.taskCache)) {
+          renderTasks()
+        }
         const jql = `
           project = "${currentProject}"
           AND issuetype IN subTaskIssueTypes()
           ORDER BY created DESC
         `
+        cache.taskCacheHash = 0
         while (1) {
           const res = await globalrequest({
             url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
@@ -186,38 +194,28 @@
 
             cache.taskCacheHash = newHash
             // cache.taskCache = subtasks
-            renderTasks()
             const now = new Date()
 
             a.qs("#status").textContent =
               "--- new data found: " +
-              now.getHours() +
+              String(now.getHours()).padStart(2, "0") +
               ":" +
-              now.getMinutes() +
+              String(now.getMinutes()).padStart(2, "0") +
               " --- " +
               Math.random()
+            renderTasks()
           } else {
             const now = new Date()
             a.qs("#status").textContent =
               "--- no new data: " +
-              now.getHours() +
+              String(now.getHours()).padStart(2, "0") +
               ":" +
-              now.getMinutes() +
+              String(now.getMinutes()).padStart(2, "0") +
               " --- " +
               Math.random()
           }
           await a.wait(a.qs("#reloadInterval").value * 1000 * 60)
         }
-      })()
-      // var assigneeDict = {}
-      async function getSubtasks() {
-        globalThis.cache = await loadlib("indexeddb ls")("cache")
-        cache.imageCache ??= {}
-
-        if ((subtasks = cache.taskCache)) {
-          renderTasks()
-        }
-
         // .filter(
         //   (e) =>
         //     e.status !== "In Review" &&
