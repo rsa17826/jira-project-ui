@@ -660,7 +660,7 @@
           k,
           localStorage[k] === "true",
         )
-        a.listen("#" + k, "click", function () {
+        a.listen("#" + k, "change", function () {
           document.documentElement.classList.toggle(k, this.checked)
           localStorage[k] = this.checked
           drawAllDependencies()
