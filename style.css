@@ -123,7 +123,12 @@ button {
 } /* yellow / In Progress */
 .task.done {
   --c: #28a745;
-} /* green / Done */
+  display: none;
+}
+.showCompleted .task.done {
+  display: block;
+}
+/* green / Done */
 .task.blocked {
   --c: #de350b;
 }
@@ -164,4 +169,10 @@ button {
   border-radius: 50%;
   border: 1px solid #555;
   translate: 0 -1.5px;
+}
+.showOnlyConnectedToMe .task:not(.isConnectedToMe):not(.mine) {
+  display: none;
+}
+.showOnlyMine .task:not(.mine) {
+  display: none;
 }
