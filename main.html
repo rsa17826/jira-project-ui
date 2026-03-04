@@ -59,6 +59,7 @@
       let rootBlockers = new Set()
       let allBlockers = new Set()
       var uname = null
+      var lastNewDataDate = null
       var tasks = {}
       var subtasks = []
       function renderTasks() {
@@ -141,6 +142,7 @@
           })
           var newHash = hashStringToInt(res.text + 1)
           // log(cache.taskCacheHash, newHash)
+          var status = null
           if (
             !cache.taskCacheHash ||
             cache.taskCacheHash !== newHash
@@ -194,26 +196,18 @@
 
             cache.taskCacheHash = newHash
             // cache.taskCache = subtasks
-            const now = new Date()
 
-            a.qs("#status").textContent =
-              "--- new data found: " +
-              String(now.getHours()).padStart(2, "0") +
-              ":" +
-              String(now.getMinutes()).padStart(2, "0") +
-              " --- " +
-              Math.random()
+            lastNewDataDate = getNow()
+            status = "new data found"
             renderTasks()
           } else {
-            const now = new Date()
-            a.qs("#status").textContent =
-              "--- no new data: " +
-              String(now.getHours()).padStart(2, "0") +
-              ":" +
-              String(now.getMinutes()).padStart(2, "0") +
-              " --- " +
-              Math.random()
+            status = "no new data found"
           }
+          a.qs("#status").textContent =
+            `--- last new data arrived at ${lastNewDataDate} --- ${status} as of ` +
+            getNow() +
+            " --- " +
+            Math.random()
           await a.wait(a.qs("#reloadInterval").value * 1000 * 60)
         }
         // .filter(
@@ -227,6 +221,14 @@
         //     assigneeUrl: st.assigneeUrl,
         //   }
         // }
+      }
+      function getNow() {
+        const now = new Date()
+        return (
+          String(now.getHours()).padStart(2, "0") +
+          ":" +
+          String(now.getMinutes()).padStart(2, "0")
+        )
       }
       //     function showTask({ key, assignee, status, summary, parent }) {
       //       return `
