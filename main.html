@@ -83,7 +83,7 @@
           if (permission === "granted") {
             new Notification("Success!", {
               body: "You have enabled notifications.",
-            })
+            }).onclick = focus.bind(window)
           }
         })
       })
@@ -235,7 +235,7 @@
                 body: `[${lastNewDataDate}] New task data has been fetched from Jira.`,
                 icon: "/favicon.ico", // Optional icon
                 requireInteraction: true,
-              })
+              }).onclick = focus.bind(window)
             }
             cache.taskCacheHash = newHash
             // cache.taskCache = subtasks
