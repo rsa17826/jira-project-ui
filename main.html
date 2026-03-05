@@ -1,6 +1,7 @@
 <!doctype html>
 <html>
   <head>
+    <meta charset="UTF-8" />
     <title>Jira API Test</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -148,14 +149,6 @@
             cache.taskCacheHash !== newHash
           ) {
             log("new data")
-            if (cache.taskCacheHash !== 0) {
-              // We check taskCacheHash !== 0 so it doesn't fire on the very first page load
-              new Notification("Jira Board Updated", {
-                body: "New task data has been fetched from Jira.",
-                icon: "/favicon.ico", // Optional icon
-                requireInteraction: true,
-              })
-            }
             const data = JSON.parse(res.text)
 
             subtasks = data.issues
@@ -202,10 +195,17 @@
                   Number(s.key.replace(/^T\d+-/, "")),
               )
 
+            lastNewDataDate = getNow()
+            if (cache.taskCacheHash !== 0) {
+              // We check taskCacheHash !== 0 so it doesn't fire on the very first page load
+              new Notification("Jira Board Updated", {
+                body: `[${lastNewDataDate}] New task data has been fetched from Jira.`,
+                icon: "/favicon.ico", // Optional icon
+                requireInteraction: true,
+              })
+            }
             cache.taskCacheHash = newHash
             // cache.taskCache = subtasks
-
-            lastNewDataDate = getNow()
             status = "new data found"
             renderTasks()
           } else {
