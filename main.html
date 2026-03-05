@@ -148,6 +148,13 @@
             cache.taskCacheHash !== newHash
           ) {
             log("new data")
+            if (cache.taskCacheHash !== 0) {
+              // We check taskCacheHash !== 0 so it doesn't fire on the very first page load
+              new Notification("Jira Board Updated", {
+                body: "New task data has been fetched from Jira.",
+                icon: "/favicon.ico", // Optional icon
+              })
+            }
             const data = JSON.parse(res.text)
 
             subtasks = data.issues
@@ -683,7 +690,13 @@
 
       ;(async () => {
         await a.waituntil(() => window.globalrequest)
-
+        // Add this inside your (async () => { ... })() block
+        if (
+          Notification.permission !== "granted" &&
+          Notification.permission !== "denied"
+        ) {
+          Notification.requestPermission()
+        }
         localStorage.lastSelfShownState ??= "false"
         getCurrentUser().then((e) => {
           uname = e.displayName
