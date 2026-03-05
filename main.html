@@ -22,6 +22,7 @@
       <input type="number" id="reloadInterval" />
       reloadInterval in mins
     </label>
+    <button id="notif-btn"></button>
     <label id="status"></label>
     <pre id="output"></pre>
     <script src="./js globals/libloader.js"></script>
@@ -57,6 +58,38 @@
     </svg>
     <script async="false">
       const a = loadlib("allfuncs")
+
+      // Function to update the button UI based on current permission
+      function updateNotifBtn() {
+        const btn = a.qs("#notif-btn")
+        const status = Notification.permission
+        btn.textContent = `Notif Status: ${status.toUpperCase()}`
+        btn.className = status // Apply CSS classes for colors
+      }
+
+      a.listen("#notif-btn", "click", () => {
+        // 1. Check if the browser supports notifications
+        if (!("Notification" in window)) {
+          alert(
+            "This browser does not support desktop notifications.",
+          )
+          return
+        }
+
+        // 2. Request permission
+        Notification.requestPermission().then((permission) => {
+          updateNotifBtn()
+
+          if (permission === "granted") {
+            new Notification("Success!", {
+              body: "You have enabled notifications.",
+            })
+          }
+        })
+      })
+
+      // Initialize UI on page load
+      updateNotifBtn()
       let rootBlockers = new Set()
       let allBlockers = new Set()
       var uname = null
@@ -692,11 +725,16 @@
       ;(async () => {
         await a.waituntil(() => window.globalrequest)
         // Add this inside your (async () => { ... })() block
-        if (
-          Notification.permission !== "granted" &&
-          Notification.permission !== "denied"
-        ) {
-          Notification.requestPermission()
+        if (location.href.startsWith("file:///")) {
+          a.qs("#notif-btn").textContent =
+            "notifications dont work on file urls"
+        } else {
+          if (
+            Notification.permission !== "granted" &&
+            Notification.permission !== "denied"
+          ) {
+            Notification.requestPermission()
+          }
         }
         localStorage.lastSelfShownState ??= "false"
         getCurrentUser().then((e) => {
