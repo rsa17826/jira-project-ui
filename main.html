@@ -153,6 +153,7 @@
               new Notification("Jira Board Updated", {
                 body: "New task data has been fetched from Jira.",
                 icon: "/favicon.ico", // Optional icon
+                requireInteraction: true,
               })
             }
             const data = JSON.parse(res.text)
