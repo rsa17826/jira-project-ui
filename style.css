@@ -50,6 +50,9 @@ body {
 }
 
 /* --- Specialized Glows --- */
+.task.mine:not(.blocked) {
+  box-shadow: 0 0 12px #94ff4d; /* glow all around */
+}
 /* Blue glow = your task */
 .task.mine {
   box-shadow: 0 0 12px #4da3ff;
