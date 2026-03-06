@@ -1,185 +1,121 @@
-.task {
-  padding: 8px 8px; /* a bit tighter padding */
-  margin-bottom: 4px; /* less vertical space between tasks */
-  border-radius: 6px;
-  border-left: 6px solid;
-  background: #f4f6f8;
+/* --- Global & Layout --- */
+body {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
   font-family: Arial, sans-serif;
-  /* line-height: 0.7; */
-}
-/* Blue glow = your task */
-.task.mine:not(.blocked) {
-  box-shadow: 0 0 12px #94ff4d; /* glow all around */
-}
-.task.mine {
-  position: relative;
-  background-clip: padding-box; /* prevents bg bleeding under border */
-  box-shadow: 0 0 12px #4da3ff; /* glow all around */
-  outline: 6px solid transparent; /* outline same width as border */
-  outline-offset: -6px; /* pulls outline inside border edges */
+  margin: 0;
 }
 
-/* Red glow = blocking one of your tasks */
-.task.blocking-mine {
-  position: relative;
-  background-clip: padding-box; /* prevents bg bleeding under border */
-  box-shadow: 0 0 12px #ff4d4d; /* glow all around */
-  outline: 6px solid transparent; /* outline same width as border */
-  outline-offset: -6px; /* pulls outline inside border edges */
-}
-.jira-link,
-.blocker-link {
-  text-decoration: none;
-  font-weight: bold;
-  color: #0747a6;
-  display: inline-block;
-  margin-bottom: 2px;
-}
-
-/* Reduce spacing for the detail lines */
-.task > div {
-  margin: 2px 0;
-}
-
-
-.blocked {
-  border-color: #de350b !important;
-  background: #ffebe6;
-}
-
-/* .blocked-section {
-  color: #de350b;
-  font-weight: bold;
-} */
-
-.blocking {
-  color: #bf2600;
-}
+#taskContainer,
 #output {
-  display: flex; /* horizontal layout */
-  flex-wrap: wrap; /* wrap to next line if too wide */
-  gap: 12px; /* space between tasks */
-}
-body {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
-  font-family: Arial, sans-serif;
-}
-
-.task {
-  flex: 0 0 auto; /* prevent stretching */
-  min-width: 250px; /* optional: minimum task width */
-  padding: 8px 8px;
-  border-radius: 6px;
-  border-left: 6px solid;
-  background: #f4f6f8;
-  line-height: 1.3;
-  background-color: #121212;
-}
-body {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
-  font-family: Arial, sans-serif;
-}
-
-#taskContainer {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   padding: 12px;
-  background-color: #121212;
 }
-button {
-  background-color: #777;
-  border: 2px solid #666;
-  border-radius: 120px;
+
+/* --- State Variables --- */
+.task.todo {
+  --c: #3880ff;
 }
-/* Task cards */
+.task.progress {
+  --c: #ffb400;
+}
+.task.review {
+  --c: #e100ff;
+}
+.task.blocked {
+  --c: #de350b;
+}
+.task.done {
+  --c: #28a745;
+}
+
+/* --- Base Task Card --- */
 .task {
   flex: 0 0 auto;
   min-width: 250px;
   padding: 12px;
   border-radius: 8px;
-  background-color: #00000000;
-  border-left: 6px solid;
   line-height: 1.3;
+  position: relative;
+  border-left: 6px solid var(--c);
+  background-color: color-mix(in srgb, var(--c) 20%, #1e1e1e 80%);
   color: #e0e0e0;
 }
 
-.task.todo {
-  --c: #3880ff;
-} /* blue-gray / To Do */
-.task.progress {
-  --c: #e100ff;
-} /* yellow / In Progress */
-.task.review {
-  --c: #ffb400;
-} /* yellow / In Progress */
-.task.done {
-  --c: #28a745;
-  display: none;
-}
-.showCompleted .task.done {
-  display: block;
+/* Task Detail Spacing */
+.task > div {
+  margin: 2px 0;
 }
 
-.todo {
-  border-color: #6b778c;
-}
-.progress {
-  border-color: #ffab00;
-}
-.review {
-  border-color: #e100ff;
-}
-.done {
-  border-color: #36b37e;
+/* --- Specialized Glows --- */
+/* Blue glow = your task */
+.task.mine {
+  box-shadow: 0 0 12px #4da3ff;
+  outline: 6px solid transparent;
+  outline-offset: -6px;
+  background-clip: padding-box;
 }
 
-.task.blocked {
-  --c: #de350b;
+/* Red glow = blocking one of your tasks */
+.task.blocking-mine {
+  box-shadow: 0 0 12px #ff4d4d;
+  outline: 6px solid transparent;
+  outline-offset: -6px;
+  background-clip: padding-box;
 }
 
-.task {
-  border-left: 6px solid var(--c);
-  background-color: color-mix(in srgb, var(--c) 20%, #1e1e1e 80%);
-}
-
-/* .task.blocked {
-  box-shadow: 0 0 12px #a00;
-} */
-
-/* Jira links */
+/* --- Links & UI Elements --- */
 .jira-link,
 .blocker-link,
-.blocked a {
+.task a {
   color: #74b9ff;
   text-decoration: none;
+  font-weight: bold;
 }
+
 .jira-link:hover,
-.blocker-link:hover,
-.blocked a:hover {
+.blocker-link:hover {
   text-decoration: underline;
 }
 
-/* Blocked section */
 .blocked-section {
   color: #ff6b6b;
   font-weight: bold;
   margin: 4px 0;
 }
 
-/* Avatars inline */
 .task img.avatar {
   vertical-align: middle;
   margin-left: 6px;
   border-radius: 50%;
   border: 1px solid #555;
-  translate: 0 -1.5px;
+  transform: translateY(-1.5px);
 }
+
+/* --- Filtering Logic --- */
+.task.done {
+  display: none;
+}
+.showCompleted .task.done {
+  display: block;
+}
+
 .showOnlyConnectedToMe .task:not(.isConnectedToMe):not(.mine) {
   display: none;
 }
+
 .showOnlyMine .task:not(.mine) {
   display: none;
+}
+
+/* --- Buttons --- */
+button {
+  background-color: #444;
+  color: white;
+  padding: 8px 16px;
+  border: 1px solid #666;
+  border-radius: 20px;
+  cursor: pointer;
 }
