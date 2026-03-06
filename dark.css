@@ -15,7 +15,6 @@ html {
 body {
   background-color: var(--bg-color);
   color: var(--text-primary);
-  font-family: system-ui, sans-serif;
   line-height: 1.5;
   margin: 0;
   padding: 1rem; /* Reduced from 2rem */
@@ -119,5 +118,4 @@ input[type="number"] {
   border: 1px solid var(--border-color);
   padding: 0.3rem 0.5rem; /* Compact padding */
   border-radius: 4px;
-  font-family: inherit;
 }
