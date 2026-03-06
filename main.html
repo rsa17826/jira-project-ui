@@ -93,7 +93,6 @@
       let rootBlockers = new Set()
       let allBlockers = new Set()
       var uname = null
-      var lastNewDataDate = null
       var tasks = {}
       var subtasks = []
       function renderTasks() {
@@ -151,10 +150,11 @@
       })
       // var assigneeDict = {}
       async function getSubtasks() {
-        globalThis.cache = await loadlib("indexeddb ls")("cache")
-        cache.imageCache ??= {}
+        globalThis.ls = await loadlib("indexeddb ls")("ls")
+        ls.lastNewDataDate ??= getNow()
+        ls.imageCache ??= {}
 
-        if ((subtasks = cache.taskCache)) {
+        if ((subtasks = ls.taskCache)) {
           renderTasks()
         }
         const jql = `
@@ -162,7 +162,7 @@
           AND issuetype IN subTaskIssueTypes()
           ORDER BY created DESC
         `
-        cache.taskCacheHash = 0
+        ls.taskCacheHash = 0
         while (1) {
           const res = await globalrequest({
             url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
@@ -175,12 +175,9 @@
             },
           })
           var newHash = hashStringToInt(res.text + 1)
-          // log(cache.taskCacheHash, newHash)
+          // log(ls.taskCacheHash, newHash)
           var status = null
-          if (
-            !cache.taskCacheHash ||
-            cache.taskCacheHash !== newHash
-          ) {
+          if (!ls.taskCacheHash || ls.taskCacheHash !== newHash) {
             log("new data")
             const data = JSON.parse(res.text)
 
@@ -228,24 +225,24 @@
                   Number(s.key.replace(/^T\d+-/, "")),
               )
 
-            lastNewDataDate = getNow()
-            if (cache.taskCacheHash !== 0) {
+            if (ls.taskCacheHash !== 0) {
+              ls.lastNewDataDate = getNow()
               // We check taskCacheHash !== 0 so it doesn't fire on the very first page load
               new Notification("Jira Board Updated", {
-                body: `[${lastNewDataDate}] New task data has been fetched from Jira.`,
+                body: `[${ls.lastNewDataDate}] New task data has been fetched from Jira.`,
                 icon: "/favicon.ico", // Optional icon
                 requireInteraction: true,
               }).onclick = focus.bind(window)
             }
-            cache.taskCacheHash = newHash
-            // cache.taskCache = subtasks
+            ls.taskCacheHash = newHash
+            // ls.taskCache = subtasks
             status = "new data found"
             renderTasks()
           } else {
             status = "no new data found"
           }
           a.qs("#status").textContent =
-            `--- last new data arrived at ${lastNewDataDate} --- ${status} as of ` +
+            `--- last new data arrived at ${ls.lastNewDataDate} --- ${status} as of ` +
             getNow() +
             " --- " +
             Math.random()
@@ -367,13 +364,13 @@
       }
       async function getAttachmentImage(url) {
         // time(url)
-        // log(cache.imageCache[url], !!cache.imageCache[url], url, {
-        //   ...cache.imageCache,
+        // log(ls.imageCache[url], !!ls.imageCache[url], url, {
+        //   ...ls.imageCache,
         // })
-        if (cache.imageCache[url]) {
+        if (ls.imageCache[url]) {
           // timeEnd(url)
           try {
-            return URL.createObjectURL(cache.imageCache[url])
+            return URL.createObjectURL(ls.imageCache[url])
           } catch (e) {}
         }
         const res = await globalrequest(url, {
@@ -384,7 +381,7 @@
         })
         // timeEnd(url)
         return URL.createObjectURL(
-          (cache.imageCache[url] = res.response),
+          (ls.imageCache[url] = res.response),
         ) // local URL to use in <img>
       }
 
