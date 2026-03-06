@@ -399,9 +399,12 @@
           : isMine ? "mine"
           : ""
         let statusClass = "todo"
-        if (task.statusCategory === "In Progress")
-          statusClass = "progress"
-        else if (task.statusCategory === "Done") statusClass = "done"
+        log(task, task.statusCategory, task.status)
+        if (task.statusCategory === "In Progress") {
+          if (task.status === "In Review") statusClass = "review"
+          else statusClass = "progress"
+        } else if (task.statusCategory === "Done")
+          statusClass = "done"
 
         return a.newelem(
           "div",

@@ -41,15 +41,6 @@
   margin: 2px 0;
 }
 
-.todo {
-  border-color: #6b778c;
-}
-.progress {
-  border-color: #ffab00;
-}
-.done {
-  border-color: #36b37e;
-}
 
 .blocked {
   border-color: #de350b !important;
@@ -119,6 +110,9 @@ button {
   --c: #3880ff;
 } /* blue-gray / To Do */
 .task.progress {
+  --c: #e100ff;
+} /* yellow / In Progress */
+.task.review {
   --c: #ffb400;
 } /* yellow / In Progress */
 .task.done {
@@ -128,7 +122,20 @@ button {
 .showCompleted .task.done {
   display: block;
 }
-/* green / Done */
+
+.todo {
+  border-color: #6b778c;
+}
+.progress {
+  border-color: #ffab00;
+}
+.review {
+  border-color: #e100ff;
+}
+.done {
+  border-color: #36b37e;
+}
+
 .task.blocked {
   --c: #de350b;
 }
