@@ -1,3 +1,8 @@
+/* 1. The "Magic" fix for system UI elements */
+html {
+  color-scheme: dark;
+}
+
 :root {
   --bg-color: #121212;
   --surface-color: #1e1e1e;
@@ -97,4 +102,22 @@ h3 {
 code {
   padding: 0.1rem 0.3rem;
   background: var(--surface-color);
+}
+
+/* 2. Target the specific arrows (Spin Buttons) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  /* This forces the browser to use a dark-themed version of the arrows */
+  filter: invert(1) brightness(0.8);
+  cursor: pointer;
+}
+
+/* 3. Ensure the input itself looks compact and dark */
+input[type="number"] {
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 0.3rem 0.5rem; /* Compact padding */
+  border-radius: 4px;
+  font-family: inherit;
 }

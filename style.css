@@ -1,5 +1,4 @@
-/* --- Global & Layout --- */
-body {
+--- Global & Layout --- body {
   background-color: #1e1e1e;
   color: #e0e0e0;
   font-family: Arial, sans-serif;
@@ -111,14 +110,4 @@ body {
 
 .showOnlyMine .task:not(.mine) {
   display: none;
-}
-
-/* --- Buttons --- */
-button {
-  background-color: #444;
-  color: white;
-  padding: 8px 16px;
-  border: 1px solid #666;
-  border-radius: 20px;
-  cursor: pointer;
 }
