@@ -37,7 +37,6 @@ input[type="checkbox"] {
   border-radius: 3px;
   cursor: pointer;
   vertical-align: middle;
-  margin: 0 8px; /* Balanced margin */
   transition: background 0.2s;
 }
 
@@ -78,7 +77,6 @@ button {
   background-color: var(--surface-color);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  padding: 0.4rem 0.6rem; /* Slimmer padding */
   border-radius: 4px;
   font-size: 0.95rem;
 }
@@ -87,7 +85,7 @@ button {
   background-color: var(--accent-color);
   color: #000;
   font-weight: 600;
-  padding: 0.4rem 1rem;
+  padding: 0.3rem .4rem;
   border: none;
   cursor: pointer;
 }
