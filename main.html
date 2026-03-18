@@ -245,9 +245,7 @@
           }
           a.qs("#status").textContent =
             `--- last new data arrived at ${ls.lastNewDataDate} --- ${status} as of ` +
-            getNow() +
-            " --- " +
-            Math.random()
+            getNow()
           await a.wait(a.qs("#reloadInterval").value * 1000 * 60)
         }
         // .filter(
@@ -264,11 +262,17 @@
       }
       function getNow() {
         const now = new Date()
-        return (
-          String(now.getHours()).padStart(2, "0") +
-          ":" +
-          String(now.getMinutes()).padStart(2, "0")
-        )
+
+        // Date components
+        const year = now.getFullYear()
+        const month = String(now.getMonth() + 1).padStart(2, "0")
+        const day = String(now.getDate()).padStart(2, "0")
+
+        // Time components
+        const hours = String(now.getHours()).padStart(2, "0")
+        const minutes = String(now.getMinutes()).padStart(2, "0")
+
+        return `${hours}:${minutes} ${month}/${day}/${year}`
       }
       //     function showTask({ key, assignee, status, summary, parent }) {
       //       return `
