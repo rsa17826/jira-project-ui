@@ -166,86 +166,90 @@
         `
         ls.taskCacheHash = 0
         while (1) {
-          const res = await globalrequest({
-            url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
-              jql,
-            )}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment`,
-            method: "GET",
-            headers: {
-              Authorization: "Basic " + btoa(email + ":" + apiToken),
-              Accept: "application/json",
-            },
-          })
-          var newHash = hashStringToInt(res.text + 1)
-          // log(ls.taskCacheHash, newHash)
-          var status = null
-          if (!ls.taskCacheHash || ls.taskCacheHash !== newHash) {
-            log("new data")
-            const data = JSON.parse(res.text)
+          try {
+            const res = await globalrequest({
+              url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
+                jql,
+              )}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment`,
+              method: "GET",
+              headers: {
+                Authorization:
+                  "Basic " + btoa(email + ":" + apiToken),
+                Accept: "application/json",
+              },
+            })
+            var newHash = hashStringToInt(res.text + 1)
+            // log(ls.taskCacheHash, newHash)
+            var status = null
+            if (!ls.taskCacheHash || ls.taskCacheHash !== newHash) {
+              log("new data")
+              const data = JSON.parse(res.text)
 
-            subtasks = data.issues
-              .filter((issue) => issue.fields.issuetype.subtask)
-              .map((issue) => {
-                const { blocks, blockedBy } = extractBlockInfo(issue)
-                log(issue)
-                const attachments = (
-                  issue.fields.attachment || []
-                ).map((att) => ({
-                  id: att.id,
-                  filename: att.filename,
-                  mimeType: att.mimeType,
-                  size: att.size,
-                  url: att.content, // direct link to file
-                  author: att.author?.displayName,
-                  created: att.created,
-                }))
-                log(issue.key, issue.fields.assignee?.avatarUrls)
-                return {
-                  key: issue.key,
-                  summary: issue.fields.summary,
-                  status: issue.fields.status?.name,
-                  statusCategory:
-                    issue.fields.status?.statusCategory?.name,
-                  assignee: issue.fields.assignee?.displayName,
-                  assigneeUrl: unescape(
-                    Object.values(
-                      issue.fields.assignee?.avatarUrls ?? [],
-                    )?.[0]?.match?.(
-                      /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
-                    )?.[1],
-                  ),
-                  // parent: issue.fields.parent?.key,
-                  priority: issue.fields.priority?.name,
-                  blocks,
-                  blockedBy,
-                  attachments,
-                }
-              })
-              .sort(
-                (a, s) =>
-                  Number(a.key.replace(/^T\d+-/, "")) -
-                  Number(s.key.replace(/^T\d+-/, "")),
-              )
+              subtasks = data.issues
+                .filter((issue) => issue.fields.issuetype.subtask)
+                .map((issue) => {
+                  const { blocks, blockedBy } =
+                    extractBlockInfo(issue)
+                  log(issue)
+                  const attachments = (
+                    issue.fields.attachment || []
+                  ).map((att) => ({
+                    id: att.id,
+                    filename: att.filename,
+                    mimeType: att.mimeType,
+                    size: att.size,
+                    url: att.content, // direct link to file
+                    author: att.author?.displayName,
+                    created: att.created,
+                  }))
+                  log(issue.key, issue.fields.assignee?.avatarUrls)
+                  return {
+                    key: issue.key,
+                    summary: issue.fields.summary,
+                    status: issue.fields.status?.name,
+                    statusCategory:
+                      issue.fields.status?.statusCategory?.name,
+                    assignee: issue.fields.assignee?.displayName,
+                    assigneeUrl: unescape(
+                      Object.values(
+                        issue.fields.assignee?.avatarUrls ?? [],
+                      )?.[0]?.match?.(
+                        /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
+                      )?.[1],
+                    ),
+                    // parent: issue.fields.parent?.key,
+                    priority: issue.fields.priority?.name,
+                    blocks,
+                    blockedBy,
+                    attachments,
+                  }
+                })
+                .sort(
+                  (a, s) =>
+                    Number(a.key.replace(/^T\d+-/, "")) -
+                    Number(s.key.replace(/^T\d+-/, "")),
+                )
 
-            if (ls.taskCacheHash !== 0) {
-              ls.lastNewDataDate = getNow()
-              // We check taskCacheHash !== 0 so it doesn't fire on the very first page load
-              new Notification("Jira Board Updated", {
-                body: `[${ls.lastNewDataDate}] New task data has been fetched from Jira.`,
-                icon: "/favicon.ico", // Optional icon
-                requireInteraction: true,
-              }).onclick = focus.bind(window)
+              if (ls.taskCacheHash !== 0) {
+                ls.lastNewDataDate = getNow()
+                // We check taskCacheHash !== 0 so it doesn't fire on the very first page load
+                new Notification("Jira Board Updated", {
+                  body: `[${ls.lastNewDataDate}] New task data has been fetched from Jira.`,
+                  icon: "/favicon.ico", // Optional icon
+                  requireInteraction: true,
+                }).onclick = focus.bind(window)
+              }
+              ls.taskCacheHash = newHash
+              // ls.taskCache = subtasks
+              renderTasks()
             }
-            ls.taskCacheHash = newHash
-            // ls.taskCache = subtasks
-            status = "new data found"
-            renderTasks()
-          } else {
-            status = "no new data found"
+            a.qs("#status").textContent =
+              `--- last new data arrived at ${ls.lastNewDataDate} --- last checked at ${getNow()}`
+          } catch (e) {
+            error(e)
+            a.qs("#status").textContent =
+              `--- last new data arrived at ${ls.lastNewDataDate} --- failed last checked at ${getNow()} with error: ${e.message}`
           }
-          a.qs("#status").textContent =
-            `--- last new data arrived at ${ls.lastNewDataDate} --- ${status} as of ` +
-            getNow()
           await a.wait(a.qs("#reloadInterval").value * 1000 * 60)
         }
         // .filter(
