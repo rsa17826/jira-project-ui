@@ -25,6 +25,7 @@
       reloadInterval in mins
     </label>
     <button id="notif-btn"></button>
+    <br />
     <label id="status"></label>
     <pre id="output"></pre>
     <script src="./js globals/libloader.js"></script>
@@ -166,7 +167,10 @@
         `
         ls.taskCacheHash = 0
         while (1) {
+          const lnda = `last new data arrived at ${ls.lastNewDataDate}`
           try {
+            a.qs("#status").textContent =
+              `${lnda} --- checking for new data as of ${getNow()}`
             const res = await globalrequest({
               url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
                 jql,
@@ -244,11 +248,11 @@
               renderTasks()
             }
             a.qs("#status").textContent =
-              `--- last new data arrived at ${ls.lastNewDataDate} --- last checked at ${getNow()}`
+              `${lnda} --- last checked for new data at ${getNow()}`
           } catch (e) {
             error(e)
             a.qs("#status").textContent =
-              `--- last new data arrived at ${ls.lastNewDataDate} --- failed last checked at ${getNow()} with error: ${e.message}`
+              `${lnda} --- failed last checked at ${getNow()} with error: ${e.message}`
           }
           await a.wait(a.qs("#reloadInterval").value * 1000 * 60)
         }
