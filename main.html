@@ -423,7 +423,7 @@
             class: [
               "task",
               statusClass,
-              isBlocked && "blocked",
+              (isBlocked || task.status == "Backlog") && "blocked",
               glowClass,
               allBlockers.has(task.key) && "isConnectedToMe",
             ].filter(Boolean),
@@ -476,11 +476,19 @@
                 }),
               ]),
             a.newelem("div", { class: "summary" }, [task.summary]),
-            a.newelem("div", {}, [
-              a.newelem("strong", {}, ["Status:"]),
-              " ",
-              task.status,
-            ]),
+            a.newelem(
+              "div",
+              {
+                style: {
+                  color: task.status == "Backlog" ? "red" : null,
+                },
+              },
+              [
+                a.newelem("strong", {}, ["Status:"]),
+                " ",
+                task.status,
+              ],
+            ),
             a.newelem("div", {}, [
               a.newelem("strong", {}, ["Assignee:"]),
               " ",
