@@ -21,6 +21,10 @@
       showOnlyMine
     </label>
     <label>
+      <input type="checkbox" id="hideBacklog" />
+      hideBacklog
+    </label>
+    <label>
       <input type="number" id="reloadInterval" />
       reloadInterval in mins
     </label>
@@ -162,7 +166,7 @@
         }
         const jql = `
           project = "${currentProject}"
-          AND issuetype IN subTaskIssueTypes()
+          AND issuetype IN (subTaskIssueTypes(), Bug, Story, Task)
           ORDER BY created DESC
         `
         ls.taskCacheHash = 0
@@ -190,7 +194,15 @@
               const data = JSON.parse(res.text)
 
               subtasks = data.issues
-                .filter((issue) => issue.fields.issuetype.subtask)
+                .filter((issue) => {
+                  const isSubtask = issue.fields.issuetype.subtask
+                  const isStandard = [
+                    "Bug",
+                    "Story",
+                    "Task",
+                  ].includes(issue.fields.issuetype.name)
+                  return isSubtask || isStandard
+                })
                 .map((issue) => {
                   const { blocks, blockedBy } =
                     extractBlockInfo(issue)
@@ -211,6 +223,7 @@
                     key: issue.key,
                     summary: issue.fields.summary,
                     status: issue.fields.status?.name,
+                    type: issue.fields.issuetype.name,
                     statusCategory:
                       issue.fields.status?.statusCategory?.name,
                     assignee: issue.fields.assignee?.displayName,
@@ -427,7 +440,7 @@
               glowClass,
               allBlockers.has(task.key) && "isConnectedToMe",
             ].filter(Boolean),
-            dataset: { taskKey: task.key },
+            dataset: { taskKey: task.key, status: task.status },
           },
           [
             a.newelem(
@@ -510,6 +523,17 @@
                   },
                 }),
             ]),
+            a.newelem(
+              "div",
+              {
+                style: {
+                  color: { Task: "#00f", Bug: "#f00", Story: "#0f0" }[
+                    task.type
+                  ],
+                },
+              },
+              [a.newelem("strong", {}, ["Type:"]), " ", task.type],
+            ),
             // a.newelem("div", {}, [
             //   a.newelem("strong", {}, ["Parent:"]),
             //   " ",
@@ -771,6 +795,7 @@
       newToggle("showOnlyConnectedToMe")
       newToggle("showOnlyMine")
       newToggle("showCompleted")
+      newToggle("hideBacklog")
       function newToggle(k) {
         a.qs("#" + k).checked = localStorage[k] === "true"
         document.documentElement.classList.toggle(

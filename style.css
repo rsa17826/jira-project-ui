@@ -112,3 +112,8 @@ body {
 .showOnlyMine .task:not(.mine) {
   display: none;
 }
+/* When the 'hideBacklog' class is on the root element, 
+   find tasks that are in the Backlog and hide them */
+.hideBacklog .task[data-status="Backlog"] {
+  display: none;
+}
