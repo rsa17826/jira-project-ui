@@ -527,9 +527,12 @@
               "div",
               {
                 style: {
-                  color: { Task: "#00f", Bug: "#f00", Story: "#0f0" }[
-                    task.type
-                  ],
+                  color: {
+                    Task: "#00f",
+                    Bug: "#f00",
+                    Story: "#0f0",
+                    Subtask: "#00f",
+                  }[task.type],
                 },
               },
               [a.newelem("strong", {}, ["Type:"]), " ", task.type],
