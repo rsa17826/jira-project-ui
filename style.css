@@ -117,3 +117,17 @@ body {
 .hideBacklog .task[data-status="Backlog"] {
   display: none;
 }
+.issue-type {
+  font-size: 0.8em;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-right: 8px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #444;
+}
+
+/* Specific colors for Jira types */
+.type-bug .issue-type { color: #ff5252; border: 1px solid #ff5252; }
+.type-story .issue-type { color: #4caf50; border: 1px solid #4caf50; }
+.type-task .issue-type { color: #2196f3; border: 1px solid #2196f3; }

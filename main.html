@@ -523,20 +523,23 @@
                   },
                 }),
             ]),
-            a.newelem(
-              "div",
-              {
-                style: {
-                  color: {
-                    Task: "#00f",
-                    Bug: "#f00",
-                    Story: "#0f0",
-                    Subtask: "#00f",
-                  }[task.type],
+            a.newelem("div", { class: "task-header" }, [
+              a.newelem(
+                "strong",
+                {
+                  class: "issue-type",
+                  style: {
+                    color: {
+                      Task: "#00f",
+                      Bug: "#f00",
+                      Story: "#0f0",
+                      Subtask: "#00f",
+                    }[task.type],
+                  },
                 },
-              },
-              [a.newelem("strong", {}, ["Type:"]), " ", task.type],
-            ),
+                [task.type],
+              ),
+            ]),
             // a.newelem("div", {}, [
             //   a.newelem("strong", {}, ["Parent:"]),
             //   " ",
