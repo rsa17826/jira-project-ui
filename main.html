@@ -221,6 +221,7 @@
                   log(issue.key, issue.fields.assignee?.avatarUrls)
                   return {
                     key: issue.key,
+                    typeIcon: issue.fields.issuetype.iconUrl,
                     summary: issue.fields.summary,
                     status: issue.fields.status?.name,
                     type: issue.fields.issuetype.name,
@@ -523,23 +524,44 @@
                   },
                 }),
             ]),
-            a.newelem("div", { class: "task-header" }, [
-              a.newelem(
-                "strong",
-                {
-                  class: "issue-type",
-                  style: {
-                    color: {
-                      Task: "#00f",
-                      Bug: "#f00",
-                      Story: "#0f0",
-                      Subtask: "#00f",
-                    }[task.type],
-                  },
+
+            a.newelem(
+              "div",
+              {
+                class: "task-header",
+                style: {
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  marginBottom: "5px",
                 },
-                [task.type],
-              ),
-            ]),
+              },
+              [
+                a.newelem("img", {
+                  src: task.typeIcon,
+                  width: 16,
+                  height: 16,
+                  alt: task.type,
+                  title: task.type,
+                  style: { borderRadius: "2px" },
+                }),
+                a.newelem(
+                  "strong",
+                  {
+                    class: "issue-type",
+                    style: {
+                      color: {
+                        Task: "#00f",
+                        Bug: "#f00",
+                        Story: "#0f0",
+                        Subtask: "#00f",
+                      }[task.type],
+                    },
+                  },
+                  [task.type],
+                ),
+              ],
+            ),
             // a.newelem("div", {}, [
             //   a.newelem("strong", {}, ["Parent:"]),
             //   " ",
