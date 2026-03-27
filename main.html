@@ -25,6 +25,10 @@
       hideBacklog
     </label>
     <label>
+      <input type="checkbox" id="storiesGetBlockedBySubtasks" />
+      storiesGetBlockedBySubtasks</label
+    >
+    <label>
       <input type="number" id="reloadInterval" />
       reloadInterval in mins
     </label>
@@ -178,7 +182,7 @@
             const res = await globalrequest({
               url: `https://${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(
                 jql,
-              )}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment`,
+              )}&maxResults=100&fields=summary,status,assignee,issuetype,priority,issuelinks,attachment,parent`,
               method: "GET",
               headers: {
                 Authorization:
@@ -192,7 +196,7 @@
             if (!ls.taskCacheHash || ls.taskCacheHash !== newHash) {
               log("new data")
               const data = JSON.parse(res.text)
-
+              log(data.issues)
               subtasks = data.issues
                 .filter((issue) => {
                   const isSubtask = issue.fields.issuetype.subtask
@@ -206,7 +210,6 @@
                 .map((issue) => {
                   const { blocks, blockedBy } =
                     extractBlockInfo(issue)
-                  log(issue)
                   const attachments = (
                     issue.fields.attachment || []
                   ).map((att) => ({
@@ -218,7 +221,7 @@
                     author: att.author?.displayName,
                     created: att.created,
                   }))
-                  log(issue.key, issue.fields.assignee?.avatarUrls)
+                  // log(issue.key, issue.fields.assignee?.avatarUrls)
                   return {
                     key: issue.key,
                     typeIcon: issue.fields.issuetype.iconUrl,
@@ -235,7 +238,8 @@
                         /https?:\/\/secure\.gravatar\.com\/avatar\/[\w\d]+\?d=([^&]+)/,
                       )?.[1],
                     ),
-                    // parent: issue.fields.parent?.key,
+                    parent: issue.fields.parent?.key,
+                    isSubtask: issue.fields.issuetype.subtask,
                     priority: issue.fields.priority?.name,
                     blocks,
                     blockedBy,
@@ -247,7 +251,34 @@
                     Number(a.key.replace(/^T\d+-/, "")) -
                     Number(s.key.replace(/^T\d+-/, "")),
                 )
+              // Map to easily find parents
+              if (
+                localStorage.storiesGetBlockedBySubtasks == "true"
+              ) {
+                const issueMap = {}
+                subtasks.forEach((s) => (issueMap[s.key] = s))
+                subtasks.forEach((issue) => {
+                  if (
+                    issue.isSubtask &&
+                    issue.parent &&
+                    issueMap[issue.parent]
+                  ) {
+                    const parent = issueMap[issue.parent]
 
+                    // Only block the story if the subtask isn't "Done"
+                    if (issue.statusCategory !== "Done") {
+                      // Add subtask key to Story's blockedBy
+                      if (!parent.blockedBy.includes(issue.key)) {
+                        parent.blockedBy.push(issue.key)
+                      }
+                      // Add Story key to subtask's blocks
+                      if (!issue.blocks.includes(parent.key)) {
+                        issue.blocks.push(parent.key)
+                      }
+                    }
+                  }
+                })
+              }
               if (ls.taskCacheHash !== 0) {
                 ls.lastNewDataDate = getNow()
                 // We check taskCacheHash !== 0 so it doesn't fire on the very first page load
@@ -420,8 +451,8 @@
         const isMine = task.assignee === uname
         // const isBlockingMine = isBlockingMyTask(task.key)
         const glowClass =
-          isRootBlocker ? "blocking-mine"
-          : isMine ? "mine"
+          isMine ? "mine"
+          : isRootBlocker ? "blocking-mine"
           : ""
         let statusClass = "todo"
         log(task, task.statusCategory, task.status)
@@ -824,7 +855,11 @@
       newToggle("showOnlyMine")
       newToggle("showCompleted")
       newToggle("hideBacklog")
-      function newToggle(k) {
+      newToggle(
+        "storiesGetBlockedBySubtasks",
+        location.reload.bind(location),
+      )
+      function newToggle(k, cb) {
         a.qs("#" + k).checked = localStorage[k] === "true"
         document.documentElement.classList.toggle(
           k,
@@ -833,6 +868,7 @@
         a.listen("#" + k, "change", function () {
           document.documentElement.classList.toggle(k, this.checked)
           localStorage[k] = this.checked
+          cb?.(this.checked)
           drawAllDependencies()
         })
       }
