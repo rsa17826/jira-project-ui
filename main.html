@@ -744,7 +744,7 @@
 
         // perpendicular offset (smaller for short lines, bigger for longer)
         // const offset = Math.min(50, Math.sqrt(dx * dx + dy * dy) / 3)
-        const rect = fromEl.getBoundingClientRect()
+        const rect = toEl.getBoundingClientRect()
         const path = document.createElementNS(
           "http://www.w3.org/2000/svg",
           "path",
