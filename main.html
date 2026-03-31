@@ -749,21 +749,21 @@
           "http://www.w3.org/2000/svg",
           "path",
         )
-        const seed = hashStringToInt(taskKey) // convert ID to number
+        // const seed = hashStringToInt(taskKey) // convert ID to number
 
-        if (start.side === "x") {
-          end.y += randomIntFromSeed(
-            seed,
-            -rect.height / 2,
-            rect.height / 2,
-          )
-        } else {
-          end.x += randomIntFromSeed(
-            seed,
-            -rect.width / 2,
-            rect.width / 2,
-          )
-        }
+        // if (start.side === "x") {
+        //   end.y += randomIntFromSeed(
+        //     seed,
+        //     -rect.height / 2,
+        //     rect.height / 2,
+        //   )
+        // } else {
+        //   end.x += randomIntFromSeed(
+        //     seed,
+        //     -rect.width / 2,
+        //     rect.width / 2,
+        //   )
+        // }
         path.setAttribute(
           "d",
           `M ${start.x},${start.y} ${end.x},${end.y}`,
