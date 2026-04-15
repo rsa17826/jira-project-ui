@@ -117,6 +117,9 @@
                 )
                 .replace(/-\d+\.png$/, "")
             ] ?? v.assigneeUrl
+          if (v.assigneeUrl === "undefined") {
+            v.assigneeUrl = "./images/undefined.png"
+          }
           tasks[v.key] = v
         }
         ;[rootBlockers, allBlockers] = getRootBlockersOfMine()
@@ -194,9 +197,9 @@
             // log(ls.taskCacheHash, newHash)
             var status = null
             if (!ls.taskCacheHash || ls.taskCacheHash !== newHash) {
-              log("new data")
+              // log("new data")
               const data = JSON.parse(res.text)
-              log(data.issues)
+              // log(data.issues)
               subtasks = data.issues
                 .filter((issue) => {
                   const isSubtask = issue.fields.issuetype.subtask
@@ -355,7 +358,7 @@
 
             if (link.inwardIssue) {
               // This issue IS BLOCKED BY another issue
-              log(link.inwardIssue.fields.status.name)
+              // log(link.inwardIssue.fields.status.name)
               if (link.inwardIssue.fields.status.name != "Done") {
                 blockedBy.push(link.inwardIssue.key)
               }
@@ -398,7 +401,7 @@
 
           const task = tasks[taskKey]
           // ADD THIS: If the blocker is already Done, it's not a root blocker anymore
-          log(task.statusCategory, task)
+          // log(task.statusCategory, task)
           if (!task || task.statusCategory === "Done") return
 
           all.add(taskKey)
@@ -455,7 +458,7 @@
           : isRootBlocker ? "blocking-mine"
           : ""
         let statusClass = "todo"
-        log(task, task.statusCategory, task.status)
+        // log(task, task.statusCategory, task.status)
         if (task.statusCategory === "In Progress") {
           if (task.status === "In Review") statusClass = "review"
           else statusClass = "progress"
@@ -502,7 +505,7 @@
                       [
                         key,
                         a.newelem("img", {
-                          src: avatar ?? "./images/qa.png",
+                          src: avatar,
                           class: "avatar",
                           width: 20,
                           height: 20,
@@ -539,12 +542,10 @@
               " ",
               task.assignee || "Unassigned",
               " ",
+
               task.assigneeUrl &&
                 a.newelem("img", {
-                  src:
-                    task.assigneeUrl == "undefined" ?
-                      "./images/undefined.png"
-                    : task.assigneeUrl,
+                  src: task.assigneeUrl,
                   class: "avatar",
                   width: 18,
                   height: 18,
