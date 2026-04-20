@@ -432,7 +432,7 @@
         if (ls.imageCache[url]) {
           // timeEnd(url)
           try {
-            return URL.createObjectURL(ls.imageCache[url])
+            return ls.imageCache[url]
           } catch (e) {}
         }
         const res = await globalrequest(url, {
@@ -442,9 +442,7 @@
           },
         })
         // timeEnd(url)
-        return URL.createObjectURL(
-          (ls.imageCache[url] = res.response),
-        ) // local URL to use in <img>
+        return (ls.imageCache[url] = res.response) // local URL to use in <img>
       }
 
       function showTask(task) {
@@ -602,18 +600,30 @@
             task.attachments.length ?
               a.newelem("div", { class: "attachments" }, [
                 task.attachments.map((att, idx) => {
-                  var img = a.newelem(
-                    "img",
-                    {
-                      width: "100px",
-                      maxHeight: "300px",
-                    },
-                    [],
-                  )
-                  getAttachmentImage(att.url).then((url) => {
+                  var img = a.newelem("null", {})
+                  getAttachmentImage(att.url).then((data) => {
+                    let el
+
+                    const type = data.type
+
+                    if (type.startsWith("video/")) {
+                      el = a.newelem("video", {
+                        width: "100px",
+                        maxHeight: "300px",
+                        controls: false,
+                        playing: true,
+                      })
+                    } else {
+                      el = a.newelem("img", {
+                        width: "100px",
+                        maxHeight: "300px",
+                      })
+                    }
+                    var url = URL.createObjectURL(data)
                     img.parentElement.href = url
-                    img.src = url
-                    img.onload = drawAllDependencies
+                    el.src = url
+                    el.onload = drawAllDependencies
+                    img.replaceWith(el)
                   })
                   return a.newelem(
                     "a",
