@@ -611,18 +611,20 @@
                         width: "100px",
                         maxHeight: "300px",
                         controls: false,
-                        playing: true,
+                        autoplay: true,
+                        muted: true,
+                        onloadeddata: drawAllDependencies,
                       })
                     } else {
                       el = a.newelem("img", {
                         width: "100px",
                         maxHeight: "300px",
+                        onload: drawAllDependencies,
                       })
                     }
                     var url = URL.createObjectURL(data)
                     img.parentElement.href = url
                     el.src = url
-                    el.onload = drawAllDependencies
                     img.replaceWith(el)
                   })
                   return a.newelem(
